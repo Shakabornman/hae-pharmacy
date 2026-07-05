@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HAE Pharmacy</title>
+  <style>
+    /* ── Reset & base ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:      #1F3864;
+      --mid-blue:  #2E5FA3;
+      --teal:      #0F6E56;
+      --white:     #FFFFFF;
+      --off-white: #F4F6FA;
+      --grey-100:  #F7F7F7;
+      --grey-300:  #CCCCCC;
+      --grey-600:  #666666;
+      --red:       #C00000;
+      --gold:      #F4B942;
+      --green:     #1A5C2A;
+      --text:      #1A1A1A;
+      --radius:    8px;
+      --shadow:    0 2px 12px rgba(0,0,0,0.10);
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--off-white);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Utility ────────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    /* ── Screens ────────────────────────────────────────────────────── */
+    .screen {
+      display: none;
+      min-height: 100vh;
+    }
+    .screen.active { display: flex; }
+
+    /* ── Loading screen ─────────────────────────────────────────────── */
+    #screen-loading {
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      background: var(--navy);
+    }
+    #screen-loading .logo-text {
+      color: var(--white);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    #screen-loading .sub-text {
+      color: rgba(255,255,255,0.6);
+      font-size: 0.9rem;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: var(--white);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Login screen ───────────────────────────────────────────────── */
+    #screen-login {
+      align-items: center;
+      justify-content: center;
+      background: var(--navy);
+    }
+    .login-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .login-card .brand {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .login-card .brand-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .login-card .brand-module {
+      font-size: 0.85rem;
+      color: var(--mid-blue);
+      margin-top: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .login-card label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--grey-600);
+      margin-bottom: 6px;
+      margin-top: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .login-card input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .login-card input:focus { border-color: var(--mid-blue); }
+    .btn-primary {
+      display: block;
+      width: 100%;
+      margin-top: 24px;
+      padding: 11px;
+      background: var(--mid-blue);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: var(--navy); }
+    .btn-primary:disabled { background: var(--grey-300); cursor: not-allowed; }
+    .login-error {
+      margin-top: 14px;
+      padding: 10px 12px;
+      background: #FFF0F0;
+      border: 1px solid #FFCCCC;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      color: var(--red);
+      text-align: center;
+    }
+
+    /* ── Access denied screen ───────────────────────────────────────── */
+    #screen-denied {
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      background: var(--navy);
+      text-align: center;
+      padding: 24px;
+    }
+    .denied-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 36px;
+      max-width: 420px;
+      width: 100%;
+    }
+    .denied-card .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+    .denied-card h2 {
+      color: var(--navy);
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+    }
+    .denied-card p {
+      color: var(--grey-600);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .btn-secondary {
+      padding: 9px 20px;
+      background: transparent;
+      color: var(--mid-blue);
+      border: 1.5px solid var(--mid-blue);
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-secondary:hover { background: var(--mid-blue); color: var(--white); }
+
+    /* ── App shell ──────────────────────────────────────────────────── */
+    #screen-app {
+      flex-direction: column;
+    }
+
+    /* Top bar */
+    .topbar {
+      background: var(--navy);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      height: 56px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .topbar-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .topbar-module {
+      font-size: 0.75rem;
+      background: var(--mid-blue);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-info {
+      text-align: right;
+    }
+    .user-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .user-role {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.65);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .btn-signout {
+      padding: 6px 14px;
+      background: transparent;
+      color: rgba(255,255,255,0.75);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: var(--radius);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-signout:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--white);
+    }
+
+    /* App body */
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar nav */
+    .sidebar {
+      width: 220px;
+      background: var(--white);
+      border-right: 1px solid var(--grey-300);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+    .nav-section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--grey-600);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 20px 16px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      font-size: 0.88rem;
+      color: var(--text);
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .nav-item:hover {
+      background: var(--grey-100);
+      color: var(--mid-blue);
+    }
+    .nav-item.active {
+      background: #EAF0FB;
+      color: var(--mid-blue);
+      border-left-color: var(--mid-blue);
+      font-weight: 600;
+    }
+    .nav-item.disabled {
+      color: var(--grey-300);
+      cursor: not-allowed;
+    }
+    .nav-item.disabled:hover {
+      background: transparent;
+      color: var(--grey-300);
+    }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    /* Main content area */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px;
+      background: var(--off-white);
+    }
+
+    /* Page header */
+    .page-header {
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .page-header p {
+      font-size: 0.88rem;
+      color: var(--grey-600);
+      margin-top: 4px;
+    }
+
+    /* Placeholder page content */
+    .placeholder-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px;
+      text-align: center;
+      color: var(--grey-600);
+    }
+    .placeholder-card .step-badge {
+      display: inline-block;
+      background: var(--navy);
+      color: var(--white);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .placeholder-card h2 {
+      font-size: 1.1rem;
+      color: var(--navy);
+      margin-bottom: 8px;
+    }
+    .placeholder-card p {
+      font-size: 0.88rem;
+      line-height: 1.6;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    /* Welcome panel */
+    .welcome-panel {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--mid-blue);
+    }
+    .welcome-panel h2 {
+      font-size: 1.05rem;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .welcome-panel p {
+      font-size: 0.88rem;
+      color: var(--grey-600);
+      line-height: 1.6;
+    }
+    .role-tag {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .role-tag.executive { background: #EAF0FB; color: var(--navy); }
+    .role-tag.finance   { background: #E8F5E9; color: var(--green); }
+    .role-tag.nursing   { background: #FFF8E1; color: #7A5000; }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .status-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      text-align: center;
+    }
+    .status-card .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--grey-600);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .status-card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .status-card .sub {
+      font-size: 0.75rem;
+      color: var(--grey-600);
+      margin-top: 4px;
+    }
+    .coming-soon {
+      font-size: 0.75rem;
+      color: var(--grey-300);
+      font-style: italic;
+    }
+
+    /* Page views inside app */
+    .page-view { display: none; }
+    .page-view.active { display: block; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .sidebar { width: 180px; }
+      .main-content { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── LOADING ─────────────────────────────────────────────────────── -->
+  <div id="screen-loading" class="screen active">
+    <div class="spinner"></div>
+    <div class="logo-text">HOSPITAL AT EKHAYA</div>
+    <div class="sub-text">Pharmacy Module — Loading…</div>
+  </div>
+
+  <!-- ── LOGIN ──────────────────────────────────────────────────────── -->
+  <div id="screen-login" class="screen">
+    <div class="login-card">
+      <div class="brand">
+        <div class="brand-name">HOSPITAL AT EKHAYA</div>
+        <div class="brand-module">Pharmacy Module</div>
+      </div>
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="your@email.com" autocomplete="email" />
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+      <button class="btn-primary" id="btn-login">Sign In</button>
+      <div id="login-error" class="login-error hidden"></div>
+    </div>
+  </div>
+
+  <!-- ── ACCESS DENIED ──────────────────────────────────────────────── -->
+  <div id="screen-denied" class="screen">
+    <div class="denied-card">
+      <div class="icon">🔒</div>
+      <h2>Access not authorised</h2>
+      <p>
+        Your account does not have access to the Pharmacy module.<br />
+        Contact the COO to request access.
+      </p>
+      <button class="btn-secondary" id="btn-denied-signout">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- ── APP SHELL ───────────────────────────────────────────────────── -->
+  <div id="screen-app" class="screen">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title">HOSPITAL AT EKHAYA</div>
+        </div>
+        <span class="topbar-module">Pharmacy</span>
+      </div>
+      <div class="topbar-right">
+        <div class="user-info">
+          <div class="user-name" id="display-name">—</div>
+          <div class="user-role" id="display-role">—</div>
+        </div>
+        <button class="btn-signout" id="btn-app-signout">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="app-body">
+
+      <!-- Sidebar -->
+      <nav class="sidebar" id="sidebar">
+        <div class="nav-section-label">Requests</div>
+        <div class="nav-item active" data-page="home">🏠 Dashboard</div>
+        <div class="nav-item" data-page="requests" id="nav-requests">📋 Stock Requests</div>
+
+        <div class="nav-section-label">Orders</div>
+        <div class="nav-item" data-page="orders" id="nav-orders">📦 Orders</div>
+        <div class="nav-item" data-page="approval" id="nav-approval">✅ Approvals</div>
+
+        <div class="nav-section-label">Invoices</div>
+        <div class="nav-item" data-page="invoices" id="nav-invoices">🧾 Invoices</div>
+        <div class="nav-item" data-page="reconcile" id="nav-reconcile">🔄 Reconciliation</div>
+
+        <div class="nav-section-label">Reference</div>
+        <div class="nav-item" data-page="formulary" id="nav-formulary">💊 Formulary</div>
+        <div class="nav-item" data-page="trifour" id="nav-trifour">📊 Trifour Import</div>
+      </nav>
+
+      <!-- Main content -->
+      <main class="main-content">
+
+        <!-- HOME / DASHBOARD -->
+        <div class="page-view active" id="page-home">
+          <div class="page-header">
+            <h1>Dashboard</h1>
+            <p>HAE Pharmacy Module — Step 2 of 8 complete. Authentication and access control confirmed.</p>
+          </div>
+          <div class="welcome-panel">
+            <h2 id="welcome-greeting">Welcome</h2>
+            <p>You are signed in to the HAE Pharmacy Module. Navigation is available on the left — screens will be activated as each build step is completed and confirmed.</p>
+            <span class="role-tag" id="welcome-role-tag">—</span>
+          </div>
+          <div class="status-grid">
+            <div class="status-card">
+              <div class="label">Build Step</div>
+              <div class="value">2 / 8</div>
+              <div class="sub">Shell confirmed</div>
+            </div>
+            <div class="status-card">
+              <div class="label">Stock Requests</div>
+              <div class="value coming-soon">—</div>
+              <div class="sub">Step 4</div>
+            </div>
+            <div class="status-card">
+              <div class="label">Pending Approvals</div>
+              <div class="value coming-soon">—</div>
+              <div class="sub">Step 6</div>
+            </div>
+            <div class="status-card">
+              <div class="label">Open Orders</div>
+              <div class="value coming-soon">—</div>
+              <div class="sub">Step 5</div>
+            </div>
+            <div class="status-card">
+              <div class="label">Unreconciled Invoices</div>
+              <div class="value coming-soon">—</div>
+              <div class="sub">Step 7</div>
+            </div>
+            <div class="status-card">
+              <div class="label">Price Mismatches</div>
+              <div class="value coming-soon">—</div>
+              <div class="sub">Step 8</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLACEHOLDER PAGES — Steps 3–8 -->
+        <div class="page-view" id="page-requests">
+          <div class="page-header"><h1>Stock Requests</h1></div>
+          <div class="placeholder-card">
+            <div class="step-badge">Step 4</div>
+            <h2>Request Capture</h2>
+            <p>Ward requests and WhatsApp logging will be available here once Step 4 is built and confirmed.</p>
+          </div>
+        </div>
+
+        <div class="page-view" id="page-orders">
+          <div class="page-header"><h1>Orders</h1></div>
+          <div class="placeholder-card">
+            <div class="step-badge">Step 5</div>
+            <h2>Order Creation</h2>
+            <p>Buy-out scripts and presales will be created here once Step 5 is built and confirmed.</p>
+          </div>
+        </div>
+
+        <div class="page-view" id="page-approval">
+          <div class="page-header"><h1>Approvals</h1></div>
+          <div class="placeholder-card">
+            <div class="step-badge">Step 6</div>
+            <h2>Approval Workflow</h2>
+            <p>COO order approval will be available here once Step 6 is built and confirmed.</p>
+          </div>
+        </div>
+
+        <div class="page-view" id="page-invoices">
+          <div class="page-header"><h1>Invoices</h1></div>
+          <div class="placeholder-card">
+            <div class="step-badge">Step 7</div>
+            <h2>Invoice Capture</h2>
+            <p>Invoice capture and matching will be available here once Step 7 is built and confirmed.</p>
+          </div>
+        </div>
+
+        <div class="page-view" id="page-reconcile">
+          <div class="page-header"><h1>Reconciliation</h1></div>
+          <div class="placeholder-card">
+            <div class="step-badge">Step 7</div>
+            <h2>Presale Reconciliation</h2>
+            <p>Short delivery detection and presale reconciliation will be available here once Step 7 is built and confirmed.</p>
+          </div>
+        </div>
+
+        <div class="page-view" id="page-formulary">
+          <div class="page-header"><h1>Formulary</h1></div>
+          <div class="placeholder-card">
+            <div class="step-badge">Step 3</div>
+            <h2>Product Formulary</h2>
+            <p>The HAE formulary will be available here once Step 3 (Firestore import) is built and confirmed.</p>
+          </div>
+        </div>
+
+        <div class="page-view" id="page-trifour">
+          <div class="page-header"><h1>Trifour Import</h1></div>
+          <div class="placeholder-card">
+            <div class="step-badge">Step 8</div>
+            <h2>Weekly Price Comparison</h2>
+            <p>Trifour CSV import and price mismatch flagging will be available here once Step 8 is built and confirmed.</p>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ── FIREBASE + APP LOGIC ────────────────────────────────────────── -->
+  <script type="module">
+    import { firebaseConfig } from './pharmacy-config.js';
+    import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { getFirestore, doc, getDoc }
+      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    // ── Init ──────────────────────────────────────────────────────────
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // ── Screen management ─────────────────────────────────────────────
+    const screens = ['loading','login','denied','app'];
+    function showScreen(name) {
+      screens.forEach(s => {
+        const el = document.getElementById(`screen-${s}`);
+        el.classList.toggle('active', s === name);
+      });
+    }
+
+    // ── Page navigation ───────────────────────────────────────────────
+    function showPage(name) {
+      document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const page = document.getElementById(`page-${name}`);
+      const nav  = document.querySelector(`[data-page="${name}"]`);
+      if (page) page.classList.add('active');
+      if (nav)  nav.classList.add('active');
+    }
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const page = item.dataset.page;
+        if (page) showPage(page);
+      });
+    });
+
+    // ── Role helpers ──────────────────────────────────────────────────
+    const PHARMACY_TIERS = ['executive','finance','nursing'];
+
+    function getRoleLabel(tiers) {
+      if (!tiers || tiers.length === 0) return null;
+      if (tiers.includes('executive')) return 'executive';
+      if (tiers.includes('finance'))   return 'finance';
+      if (tiers.includes('nursing'))   return 'nursing';
+      return null;
+    }
+
+    const ROLE_LABELS = {
+      executive: 'COO / Executive',
+      finance:   'Finance',
+      nursing:   'Nursing',
+    };
+
+    // ── Apply role-based nav visibility ──────────────────────────────
+    // nursing  — can see requests only (orders, approvals, invoices hidden)
+    // finance  — can see requests, orders, invoices, formulary, trifour (not approvals)
+    // executive — sees everything
+    function applyNavForRole(role) {
+      const navApprovals = document.getElementById('nav-approval');
+      const navInvoices  = document.getElementById('nav-invoices');
+      const navReconcile = document.getElementById('nav-reconcile');
+      const navTrifour   = document.getElementById('nav-trifour');
+      const navOrders    = document.getElementById('nav-orders');
+
+      if (role === 'nursing') {
+        [navOrders, navApprovals, navInvoices, navReconcile, navTrifour].forEach(n => {
+          if (n) n.classList.add('disabled');
+        });
+      } else if (role === 'finance') {
+        if (navApprovals) navApprovals.classList.add('disabled');
+      }
+      // executive sees everything — no changes needed
+    }
+
+    // ── Auth state ────────────────────────────────────────────────────
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        showScreen('login');
+        return;
+      }
+
+      // User is signed in — check access_control document
+      try {
+        const acRef  = doc(db, 'access_control', user.uid);
+        const acSnap = await getDoc(acRef);
+
+        if (!acSnap.exists()) {
+          // No access_control record — treat as no access
+          showScreen('denied');
+          return;
+        }
+
+        const data   = acSnap.data();
+        const levels = data.accessLevels || [];
+        const role   = getRoleLabel(levels);
+
+        if (!role) {
+          // Authenticated but no pharmacy tier
+          showScreen('denied');
+          return;
+        }
+
+        // Authorised — set up app shell
+        const displayName = user.displayName || user.email.split('@')[0];
+        document.getElementById('display-name').textContent  = displayName;
+        document.getElementById('display-role').textContent  = ROLE_LABELS[role] || role;
+        document.getElementById('welcome-greeting').textContent = `Welcome, ${displayName}`;
+
+        const roleTag = document.getElementById('welcome-role-tag');
+        roleTag.textContent  = ROLE_LABELS[role] || role;
+        roleTag.className    = `role-tag ${role}`;
+
+        applyNavForRole(role);
+        showPage('home');
+        showScreen('app');
+
+      } catch (err) {
+        console.error('Access control check failed:', err);
+        showScreen('denied');
+      }
+    });
+
+    // ── Login ─────────────────────────────────────────────────────────
+    const btnLogin    = document.getElementById('btn-login');
+    const inputEmail  = document.getElementById('email');
+    const inputPass   = document.getElementById('password');
+    const loginError  = document.getElementById('login-error');
+
+    function showLoginError(msg) {
+      loginError.textContent = msg;
+      loginError.classList.remove('hidden');
+    }
+    function clearLoginError() {
+      loginError.classList.add('hidden');
+    }
+
+    btnLogin.addEventListener('click', async () => {
+      const email    = inputEmail.value.trim();
+      const password = inputPass.value;
+      if (!email || !password) {
+        showLoginError('Please enter your email and password.');
+        return;
+      }
+      clearLoginError();
+      btnLogin.disabled    = true;
+      btnLogin.textContent = 'Signing in…';
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged handles the rest
+      } catch (err) {
+        btnLogin.disabled    = false;
+        btnLogin.textContent = 'Sign In';
+        switch (err.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            showLoginError('Incorrect email or password. Please try again.');
+            break;
+          case 'auth/too-many-requests':
+            showLoginError('Too many attempts. Please wait a moment and try again.');
+            break;
+          default:
+            showLoginError('Sign in failed. Please try again.');
+        }
+      }
+    });
+
+    // Allow Enter key to trigger login
+    [inputEmail, inputPass].forEach(el => {
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter') btnLogin.click();
+      });
+    });
+
+    // ── Sign out ──────────────────────────────────────────────────────
+    async function doSignOut() {
+      await signOut(auth);
+      showScreen('login');
+    }
+    document.getElementById('btn-app-signout').addEventListener('click', doSignOut);
+    document.getElementById('btn-denied-signout').addEventListener('click', doSignOut);
+
+  </script>
+</body>
+</html>
