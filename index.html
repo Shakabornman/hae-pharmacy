@@ -463,6 +463,346 @@
       .sidebar { width: 180px; }
       .main-content { padding: 16px; }
     }
+
+    /* ── Step 4 — Request capture ───────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    .mb-20 { margin-bottom: 20px; }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--grey-300);
+    }
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--grey-300);
+    }
+    .card-title-row .card-title {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .form-row { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--grey-600);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .form-hint {
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--grey-300);
+      margin-left: 6px;
+    }
+    .req { color: var(--red); }
+    .form-input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--mid-blue); }
+    textarea.form-input { resize: vertical; }
+    .form-error {
+      margin-top: 10px;
+      padding: 9px 12px;
+      background: #FFF0F0;
+      border: 1px solid #FFCCCC;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      color: var(--red);
+    }
+    .form-actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* Item row */
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr 120px 80px 28px;
+      gap: 8px;
+      align-items: start;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: var(--grey-100);
+      border-radius: var(--radius);
+      position: relative;
+    }
+    .item-search-wrap { position: relative; }
+    .item-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .item-input:focus { border-color: var(--mid-blue); }
+    .item-confirm {
+      font-size: 0.75rem;
+      color: var(--teal);
+      margin-top: 3px;
+      padding: 0 2px;
+    }
+    .item-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-top: 3px;
+      text-transform: uppercase;
+    }
+    .item-badge.formulary  { background: #E8F5E9; color: var(--green); }
+    .item-badge.non-formulary { background: #FFF3CD; color: #7A5000; }
+    .item-qty {
+      padding: 8px 10px;
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      width: 100%;
+      outline: none;
+    }
+    .item-qty:focus { border-color: var(--mid-blue); }
+    .item-unit {
+      font-size: 0.75rem;
+      color: var(--grey-600);
+      margin-top: 4px;
+      text-align: center;
+    }
+    .btn-remove-item {
+      background: none;
+      border: none;
+      color: var(--grey-300);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 6px;
+      line-height: 1;
+      transition: color 0.15s;
+      align-self: center;
+    }
+    .btn-remove-item:hover { color: var(--red); }
+    .btn-add-item {
+      margin-top: 6px;
+      padding: 7px 14px;
+      background: transparent;
+      border: 1.5px dashed var(--mid-blue);
+      border-radius: var(--radius);
+      color: var(--mid-blue);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-add-item:hover { background: #EAF0FB; }
+
+    /* Autocomplete dropdown */
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    .autocomplete-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--grey-100);
+    }
+    .autocomplete-item:hover { background: var(--grey-100); }
+    .autocomplete-item .ac-name { font-weight: 600; color: var(--navy); }
+    .autocomplete-item .ac-sub  { font-size: 0.75rem; color: var(--grey-600); margin-top: 1px; }
+    .autocomplete-item.no-match { color: var(--grey-600); font-style: italic; }
+
+    /* Tab bar */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      border-bottom: 2px solid var(--grey-300);
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--grey-600);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { color: var(--mid-blue); }
+    .tab-btn.active { color: var(--mid-blue); border-bottom-color: var(--mid-blue); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Request list */
+    .request-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--grey-100);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .request-item:last-child { border-bottom: none; }
+    .request-item:hover { background: var(--grey-100); }
+    .request-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .request-ward { font-weight: 700; font-size: 0.9rem; color: var(--navy); }
+    .request-date { font-size: 0.78rem; color: var(--grey-600); }
+    .request-motivation {
+      font-size: 0.82rem;
+      color: var(--grey-600);
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .request-items-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .item-chip {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--grey-100);
+      color: var(--text);
+      border: 1px solid var(--grey-300);
+    }
+    .item-chip.non-formulary {
+      background: #FFF3CD;
+      border-color: #F4B942;
+      color: #7A5000;
+    }
+    .status-pill {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .status-pill.pending    { background: #EAF0FB; color: var(--mid-blue); }
+    .status-pill.escalated  { background: #FFF3CD; color: #7A5000; }
+    .status-pill.ordered    { background: #E8F5E9; color: var(--green); }
+    .status-pill.cancelled  { background: #FFF0F0; color: var(--red); }
+    .list-loading { padding: 24px; text-align: center; color: var(--grey-600); font-size: 0.88rem; }
+    .list-empty   { padding: 32px; text-align: center; color: var(--grey-300); font-size: 0.88rem; }
+
+    /* Filter select */
+    .filter-select {
+      padding: 6px 10px;
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      color: var(--text);
+      outline: none;
+      background: var(--white);
+    }
+
+    /* Scan review */
+    .review-banner {
+      background: #FFF8E1;
+      border: 1px solid #F4B942;
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 0.85rem;
+      color: #7A5000;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    .reading-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 0;
+      font-size: 0.88rem;
+      color: var(--grey-600);
+    }
+    .spinner-sm {
+      width: 20px; height: 20px;
+      border: 2px solid var(--grey-300);
+      border-top-color: var(--mid-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    .btn-secondary {
+      padding: 9px 18px;
+      background: transparent;
+      color: var(--mid-blue);
+      border: 1.5px solid var(--mid-blue);
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: var(--mid-blue); color: var(--white); }
+    .success-toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--teal);
+      color: var(--white);
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+      z-index: 999;
+      transition: opacity 0.3s;
+    }
+    .channel-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      margin-left: 6px;
+    }
+    .channel-badge.web       { background: #EAF0FB; color: var(--mid-blue); }
+    .channel-badge.whatsapp  { background: #E8F5E9; color: var(--green); }
+    .channel-badge.scan      { background: #F3E5F5; color: #6A1B9A; }
   </style>
 </head>
 <body>
@@ -593,13 +933,207 @@
           </div>
         </div>
 
-        <!-- PLACEHOLDER PAGES — Steps 3–8 -->
+        <!-- ── STEP 4: STOCK REQUESTS ──────────────────────────────── -->
         <div class="page-view" id="page-requests">
-          <div class="page-header"><h1>Stock Requests</h1></div>
-          <div class="placeholder-card">
-            <div class="step-badge">Step 4</div>
-            <h2>Request Capture</h2>
-            <p>Ward requests and WhatsApp logging will be available here once Step 4 is built and confirmed.</p>
+          <div class="page-header">
+            <h1>Stock Requests</h1>
+            <p id="requests-page-sub">Submit and track stock requests.</p>
+          </div>
+
+          <!-- ── NURSING: New request + active requests ─────────────── -->
+          <div id="nursing-view" class="hidden">
+
+            <!-- New request form -->
+            <div class="card mb-20">
+              <div class="card-title">New Stock Request</div>
+
+              <div class="form-row">
+                <label class="form-label">Ward <span class="req">*</span></label>
+                <input type="text" id="req-ward" class="form-input" placeholder="e.g. Medical Ward, ICU, Theatre" />
+              </div>
+
+              <div class="form-row">
+                <label class="form-label">Motivation <span class="req">*</span></label>
+                <textarea id="req-motivation" class="form-input" rows="3"
+                  placeholder="Clinical reason for this request — covers all items below"></textarea>
+              </div>
+
+              <!-- Items -->
+              <div class="form-row">
+                <label class="form-label">Items <span class="req">*</span></label>
+                <div id="items-container"></div>
+                <button class="btn-add-item" id="btn-add-item">+ Add Item</button>
+              </div>
+
+              <div id="req-error" class="form-error hidden"></div>
+              <div class="form-actions">
+                <button class="btn-primary" id="btn-submit-request">Submit Request</button>
+              </div>
+            </div>
+
+            <!-- Active requests — nursing -->
+            <div class="card">
+              <div class="card-title">My Active Requests</div>
+              <div id="nursing-requests-list">
+                <div class="list-loading">Loading requests…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── FINANCE / EXECUTIVE: Full request management ───────── -->
+          <div id="finance-view" class="hidden">
+
+            <!-- Tab bar -->
+            <div class="tab-bar mb-20">
+              <button class="tab-btn active" data-tab="all-requests">All Requests</button>
+              <button class="tab-btn" data-tab="new-web-request">New Web Request</button>
+              <button class="tab-btn" data-tab="log-whatsapp">Log WhatsApp</button>
+              <button class="tab-btn" data-tab="upload-scan">Upload Scan</button>
+            </div>
+
+            <!-- Tab: All requests -->
+            <div class="tab-panel active" id="tab-all-requests">
+              <div class="card">
+                <div class="card-title-row">
+                  <div class="card-title">All Requests</div>
+                  <select id="filter-status" class="filter-select">
+                    <option value="">All statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="escalated">Escalated</option>
+                    <option value="ordered">Ordered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div id="finance-requests-list">
+                  <div class="list-loading">Loading requests…</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab: New web request (Finance creating on behalf of ward) -->
+            <div class="tab-panel hidden" id="tab-new-web-request">
+              <div class="card">
+                <div class="card-title">New Stock Request</div>
+                <div class="form-row">
+                  <label class="form-label">Requested by (name) <span class="req">*</span></label>
+                  <input type="text" id="fin-req-name" class="form-input" placeholder="Staff member name" />
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Ward <span class="req">*</span></label>
+                  <input type="text" id="fin-req-ward" class="form-input" placeholder="e.g. Medical Ward" />
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Motivation <span class="req">*</span></label>
+                  <textarea id="fin-req-motivation" class="form-input" rows="3"
+                    placeholder="Clinical reason for this request"></textarea>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Items <span class="req">*</span></label>
+                  <div id="fin-items-container"></div>
+                  <button class="btn-add-item" id="btn-fin-add-item">+ Add Item</button>
+                </div>
+                <div id="fin-req-error" class="form-error hidden"></div>
+                <div class="form-actions">
+                  <button class="btn-primary" id="btn-fin-submit-request">Submit Request</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab: Log WhatsApp -->
+            <div class="tab-panel hidden" id="tab-log-whatsapp">
+              <div class="card">
+                <div class="card-title">Log WhatsApp Request</div>
+                <div class="form-row">
+                  <label class="form-label">Nurse / Staff name <span class="req">*</span></label>
+                  <input type="text" id="wa-name" class="form-input" placeholder="Name of person who sent the WhatsApp" />
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Ward <span class="req">*</span></label>
+                  <input type="text" id="wa-ward" class="form-input" placeholder="e.g. ICU" />
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Motivation <span class="req">*</span></label>
+                  <textarea id="wa-motivation" class="form-input" rows="2"
+                    placeholder="Clinical motivation"></textarea>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Original WhatsApp message</label>
+                  <textarea id="wa-note" class="form-input" rows="3"
+                    placeholder="Paste the original WhatsApp message here for the audit trail"></textarea>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Items <span class="req">*</span></label>
+                  <div id="wa-items-container"></div>
+                  <button class="btn-add-item" id="btn-wa-add-item">+ Add Item</button>
+                </div>
+                <div id="wa-req-error" class="form-error hidden"></div>
+                <div class="form-actions">
+                  <button class="btn-primary" id="btn-wa-submit">Submit WhatsApp Request</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab: Upload Scan -->
+            <div class="tab-panel hidden" id="tab-upload-scan">
+              <div class="card">
+                <div class="card-title">Upload Scanned Request</div>
+
+                <!-- Step 1: Upload -->
+                <div id="scan-step-upload">
+                  <div class="form-row">
+                    <label class="form-label">Nurse / Staff name <span class="req">*</span></label>
+                    <input type="text" id="scan-name" class="form-input" placeholder="Name of person who wrote the note" />
+                  </div>
+                  <div class="form-row">
+                    <label class="form-label">Ward <span class="req">*</span></label>
+                    <input type="text" id="scan-ward" class="form-input" placeholder="Ward or department" />
+                  </div>
+                  <div class="form-row">
+                    <label class="form-label">Scan file <span class="req">*</span>
+                      <span class="form-hint">Image (JPG/PNG) or PDF</span>
+                    </label>
+                    <input type="file" id="scan-file" class="form-input" accept="image/*,application/pdf" />
+                  </div>
+                  <div id="scan-upload-error" class="form-error hidden"></div>
+                  <div class="form-actions">
+                    <button class="btn-primary" id="btn-read-scan">Read Scan with AI</button>
+                  </div>
+                  <div id="scan-reading" class="hidden">
+                    <div class="reading-indicator">
+                      <div class="spinner-sm"></div>
+                      <span>Reading scan — please wait…</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Step 2: Review AI extraction -->
+                <div id="scan-step-review" class="hidden">
+                  <div class="review-banner">
+                    <strong>AI extraction complete — review and correct before saving.</strong>
+                    Items marked ⚠ were not found in the formulary — check description and quantity carefully.
+                  </div>
+                  <div class="form-row">
+                    <label class="form-label">Motivation <span class="req">*</span>
+                      <span class="form-hint">Not on the scan — add clinical reason</span>
+                    </label>
+                    <textarea id="scan-motivation" class="form-input" rows="2"
+                      placeholder="Add clinical motivation for this request"></textarea>
+                  </div>
+                  <div class="form-row">
+                    <label class="form-label">Extracted items — review each line</label>
+                    <div id="scan-items-container"></div>
+                    <button class="btn-add-item" id="btn-scan-add-item">+ Add missed item</button>
+                  </div>
+                  <div id="scan-review-error" class="form-error hidden"></div>
+                  <div class="form-actions">
+                    <button class="btn-secondary" id="btn-scan-back">← Re-upload</button>
+                    <button class="btn-primary" id="btn-scan-save">Save Request</button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -846,6 +1380,614 @@
     }
     document.getElementById('btn-app-signout').addEventListener('click', doSignOut);
     document.getElementById('btn-denied-signout').addEventListener('click', doSignOut);
+
+    // ════════════════════════════════════════════════════════════════
+    // STEP 4 — REQUEST CAPTURE
+    // ════════════════════════════════════════════════════════════════
+
+    import { collection, addDoc, query, where, orderBy,
+             onSnapshot, serverTimestamp }
+      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    // ── State ─────────────────────────────────────────────────────────
+    let currentUser    = null;
+    let currentRole    = null;
+    let formularyCache = [];   // loaded once on first request page visit
+    let formularyLoaded = false;
+
+    // Extend onAuthStateChanged to store user/role for Step 4
+    // We patch this by re-reading after the existing handler sets up the app.
+    // The existing handler calls showScreen('app') — we hook into page nav.
+
+    // ── Load formulary into memory (once) ─────────────────────────────
+    async function loadFormulary() {
+      if (formularyLoaded) return;
+      try {
+        const { getDocs } = await import(
+          'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+        const snap = await getDocs(collection(db, 'pharmacy_products'));
+        formularyCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        formularyLoaded = true;
+      } catch(e) {
+        console.error('Formulary load failed:', e);
+      }
+    }
+
+    // ── Autocomplete search ───────────────────────────────────────────
+    function searchFormulary(term) {
+      if (!term || term.length < 2) return [];
+      const t = term.toLowerCase();
+      return formularyCache
+        .filter(p =>
+          (p.description  || '').toLowerCase().includes(t) ||
+          (p.genericName  || '').toLowerCase().includes(t)
+        )
+        .slice(0, 8);
+    }
+
+    // ── Build one item row ────────────────────────────────────────────
+    let itemCounter = 0;
+    function buildItemRow(containerId, prefill = null) {
+      const id  = ++itemCounter;
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.dataset.itemId = id;
+      row.dataset.productId  = prefill?.productId  || '';
+      row.dataset.inFormulary = prefill?.inFormulary !== undefined
+        ? String(prefill.inFormulary) : '';
+
+      row.innerHTML = `
+        <div class="item-search-wrap">
+          <input type="text" class="item-input" id="item-desc-${id}"
+            placeholder="Type item name…"
+            value="${prefill?.description || ''}"
+            autocomplete="off" />
+          <div class="autocomplete-list hidden" id="ac-list-${id}"></div>
+          <div class="item-confirm" id="item-confirm-${id}">
+            ${prefill?.packSize ? `📦 ${prefill.packSize}` : ''}
+            ${prefill?.schedule ? ` · SCH ${prefill.schedule}` : ''}
+          </div>
+          <span class="item-badge ${prefill?.inFormulary === false
+            ? 'non-formulary' : (prefill?.inFormulary ? 'formulary' : 'hidden')}"
+            id="item-badge-${id}">
+            ${prefill?.inFormulary === false ? '⚠ Not on formulary'
+              : (prefill?.inFormulary ? '✓ Formulary' : '')}
+          </span>
+        </div>
+        <div>
+          <input type="number" class="item-qty" id="item-qty-${id}"
+            placeholder="Qty" min="1"
+            value="${prefill?.qty || ''}" />
+          <div class="item-unit">qty</div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--grey-600);padding-top:10px;">
+          ${prefill?.unit || ''}
+        </div>
+        <button class="btn-remove-item" title="Remove item">×</button>
+      `;
+
+      // Remove button
+      row.querySelector('.btn-remove-item').addEventListener('click', () => {
+        row.remove();
+      });
+
+      // Autocomplete
+      const input  = row.querySelector(`#item-desc-${id}`);
+      const acList = row.querySelector(`#ac-list-${id}`);
+      const confirm= row.querySelector(`#item-confirm-${id}`);
+      const badge  = row.querySelector(`#item-badge-${id}`);
+
+      input.addEventListener('input', () => {
+        const term    = input.value.trim();
+        const results = searchFormulary(term);
+        acList.innerHTML = '';
+
+        if (results.length === 0 && term.length >= 2) {
+          const li = document.createElement('div');
+          li.className = 'autocomplete-item no-match';
+          li.textContent = '⚠ Not found in formulary — will be saved as free text';
+          acList.appendChild(li);
+          acList.classList.remove('hidden');
+
+          // Mark as non-formulary
+          row.dataset.productId   = '';
+          row.dataset.inFormulary = 'false';
+          badge.textContent  = '⚠ Not on formulary';
+          badge.className    = 'item-badge non-formulary';
+          confirm.textContent = '';
+          return;
+        }
+
+        results.forEach(p => {
+          const li = document.createElement('div');
+          li.className = 'autocomplete-item';
+          li.innerHTML = `
+            <div class="ac-name">${p.description}</div>
+            <div class="ac-sub">${p.genericName || ''}
+              ${p.packSize ? '· ' + p.packSize : ''}
+              ${p.schedule ? '· SCH ' + p.schedule : ''}</div>
+          `;
+          li.addEventListener('mousedown', () => {
+            input.value             = p.description;
+            row.dataset.productId   = p.id;
+            row.dataset.inFormulary = 'true';
+            confirm.textContent     = [
+              p.packSize ? `📦 ${p.packSize}` : '',
+              p.schedule ? `SCH ${p.schedule}` : ''
+            ].filter(Boolean).join(' · ');
+            badge.textContent = '✓ Formulary';
+            badge.className   = 'item-badge formulary';
+            acList.classList.add('hidden');
+          });
+          acList.appendChild(li);
+        });
+
+        acList.classList.toggle('hidden', results.length === 0);
+      });
+
+      input.addEventListener('blur', () => {
+        setTimeout(() => acList.classList.add('hidden'), 150);
+        // If typed but no product selected — mark non-formulary
+        if (!row.dataset.productId && input.value.trim()) {
+          row.dataset.inFormulary = 'false';
+          badge.textContent = '⚠ Not on formulary';
+          badge.className   = 'item-badge non-formulary';
+        }
+      });
+
+      document.getElementById(containerId).appendChild(row);
+      return row;
+    }
+
+    // ── Collect items from a container ────────────────────────────────
+    function collectItems(containerId) {
+      const rows  = document.querySelectorAll(`#${containerId} .item-row`);
+      const items = [];
+      let valid   = true;
+      rows.forEach(row => {
+        const id   = row.dataset.itemId;
+        const desc = document.getElementById(`item-desc-${id}`)?.value.trim();
+        const qty  = parseInt(document.getElementById(`item-qty-${id}`)?.value) || 0;
+        if (!desc) { valid = false; return; }
+        items.push({
+          productId:   row.dataset.productId   || null,
+          description: desc,
+          qtyRequested:qty || 1,
+          inFormulary: row.dataset.inFormulary === 'true',
+        });
+      });
+      return { items, valid: valid && items.length > 0 };
+    }
+
+    // ── Show toast ────────────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className   = 'success-toast';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    // ── Save request to Firestore ─────────────────────────────────────
+    async function saveRequest(data) {
+      await addDoc(collection(db, 'pharmacy_requests'), {
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    // ── Render request list ───────────────────────────────────────────
+    function renderRequestList(containerId, docs) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      if (docs.length === 0) {
+        el.innerHTML = '<div class="list-empty">No requests found.</div>';
+        return;
+      }
+      el.innerHTML = '';
+      docs.forEach(req => {
+        const div = document.createElement('div');
+        div.className = 'request-item';
+        const date = req.createdAt?.toDate
+          ? req.createdAt.toDate().toLocaleDateString('en-ZA',
+              { day:'2-digit', month:'short', year:'numeric' })
+          : '—';
+        const chBadge = `<span class="channel-badge ${req.channel}">${req.channel}</span>`;
+        const itemChips = (req.items || []).map(i =>
+          `<span class="item-chip ${i.inFormulary ? '' : 'non-formulary'}">
+            ${i.inFormulary ? '' : '⚠ '}${i.description} ×${i.qtyRequested}
+           </span>`
+        ).join('');
+        div.innerHTML = `
+          <div class="request-item-top">
+            <div class="request-ward">${req.ward} ${chBadge}</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="status-pill ${req.status}">${req.status}</span>
+              <span class="request-date">${date}</span>
+            </div>
+          </div>
+          <div class="request-motivation">${req.motivation || '—'}</div>
+          <div class="request-items-preview">${itemChips}</div>
+        `;
+        el.appendChild(div);
+      });
+    }
+
+    // ── Subscribe to requests (real-time) ────────────────────────────
+    function subscribeNursingRequests(uid) {
+      const q = query(
+        collection(db, 'pharmacy_requests'),
+        where('requestedByUid', '==', uid),
+        where('status', 'in', ['pending','escalated']),
+        orderBy('createdAt','desc')
+      );
+      onSnapshot(q, snap => {
+        renderRequestList('nursing-requests-list',
+          snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+    }
+
+    function subscribeFinanceRequests(statusFilter) {
+      let q;
+      if (statusFilter) {
+        q = query(collection(db,'pharmacy_requests'),
+          where('status','==', statusFilter), orderBy('createdAt','desc'));
+      } else {
+        q = query(collection(db,'pharmacy_requests'), orderBy('createdAt','desc'));
+      }
+      onSnapshot(q, snap => {
+        renderRequestList('finance-requests-list',
+          snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+    }
+
+    // ── Scan: read with AI via Cloudflare proxy ────────────────────────
+    const PROXY_URL = 'https://hae-motivation-proxy.shakabornman.workers.dev';
+
+    async function readScanWithAI(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64 = e.target.result.split(',')[1];
+          const mime   = file.type || 'image/jpeg';
+          try {
+            const resp = await fetch(PROXY_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 1024,
+                messages: [{
+                  role: 'user',
+                  content: [
+                    {
+                      type: 'image',
+                      source: { type: 'base64', media_type: mime, data: base64 }
+                    },
+                    {
+                      type: 'text',
+                      text: `This is a handwritten pharmacy stock request from a hospital ward.
+Extract every item listed. For each item return:
+- description: the item name as written
+- qty: quantity requested (number, default 1 if not specified)
+
+Respond ONLY with a JSON array, no explanation, no markdown, no preamble.
+Example: [{"description":"Morphine 10mg amp","qty":5},{"description":"NaCl 1L","qty":10}]
+If you cannot read an item clearly, include it with description marked as "[unclear] <what you can read>".`
+                    }
+                  ]
+                }]
+              })
+            });
+            const data = await resp.json();
+            const text = data.content?.[0]?.text || '[]';
+            const clean = text.replace(/```json|```/g,'').trim();
+            resolve(JSON.parse(clean));
+          } catch(err) {
+            reject(err);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ── Init requests page ────────────────────────────────────────────
+    async function initRequestsPage(user, role) {
+      currentUser = user;
+      currentRole = role;
+      await loadFormulary();
+
+      if (role === 'nursing') {
+        document.getElementById('nursing-view').classList.remove('hidden');
+        document.getElementById('finance-view').classList.add('hidden');
+        // Add first item row
+        buildItemRow('items-container');
+        // Subscribe to active requests
+        subscribeNursingRequests(user.uid);
+
+      } else {
+        // finance or executive
+        document.getElementById('nursing-view').classList.add('hidden');
+        document.getElementById('finance-view').classList.remove('hidden');
+        // Add first item rows to each form
+        buildItemRow('fin-items-container');
+        buildItemRow('wa-items-container');
+        // Subscribe to all requests
+        subscribeFinanceRequests('');
+      }
+    }
+
+    // ── Tab switching (Finance view) ───────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${tabId}`)?.classList.add('active');
+      });
+    });
+
+    // ── Filter — finance requests ─────────────────────────────────────
+    document.getElementById('filter-status')?.addEventListener('change', (e) => {
+      subscribeFinanceRequests(e.target.value);
+    });
+
+    // ── Add item buttons ──────────────────────────────────────────────
+    document.getElementById('btn-add-item')?.addEventListener('click', () =>
+      buildItemRow('items-container'));
+    document.getElementById('btn-fin-add-item')?.addEventListener('click', () =>
+      buildItemRow('fin-items-container'));
+    document.getElementById('btn-wa-add-item')?.addEventListener('click', () =>
+      buildItemRow('wa-items-container'));
+    document.getElementById('btn-scan-add-item')?.addEventListener('click', () =>
+      buildItemRow('scan-items-container'));
+
+    // ── Submit: nursing web request ───────────────────────────────────
+    document.getElementById('btn-submit-request')?.addEventListener('click', async () => {
+      const ward       = document.getElementById('req-ward').value.trim();
+      const motivation = document.getElementById('req-motivation').value.trim();
+      const { items, valid } = collectItems('items-container');
+      const errEl = document.getElementById('req-error');
+
+      if (!ward || !motivation || !valid) {
+        errEl.textContent = 'Please fill in ward, motivation, and at least one item.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+
+      const btn = document.getElementById('btn-submit-request');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      try {
+        await saveRequest({
+          channel:         'web',
+          requestedByUid:  currentUser.uid,
+          requestedByName: currentUser.displayName || currentUser.email,
+          ward, motivation, items,
+          status: 'pending',
+          whatsappNote: '',
+        });
+        document.getElementById('req-ward').value       = '';
+        document.getElementById('req-motivation').value = '';
+        document.getElementById('items-container').innerHTML = '';
+        buildItemRow('items-container');
+        showToast('Request submitted successfully.');
+      } catch(e) {
+        errEl.textContent = 'Failed to submit. Please try again.';
+        errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Submit Request';
+    });
+
+    // ── Submit: finance web request ───────────────────────────────────
+    document.getElementById('btn-fin-submit-request')?.addEventListener('click', async () => {
+      const name       = document.getElementById('fin-req-name').value.trim();
+      const ward       = document.getElementById('fin-req-ward').value.trim();
+      const motivation = document.getElementById('fin-req-motivation').value.trim();
+      const { items, valid } = collectItems('fin-items-container');
+      const errEl = document.getElementById('fin-req-error');
+
+      if (!name || !ward || !motivation || !valid) {
+        errEl.textContent = 'Please fill in all required fields and at least one item.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+
+      const btn = document.getElementById('btn-fin-submit-request');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      try {
+        await saveRequest({
+          channel:         'web',
+          requestedByUid:  currentUser.uid,
+          requestedByName: name,
+          ward, motivation, items,
+          status: 'pending',
+          whatsappNote: '',
+        });
+        document.getElementById('fin-req-name').value       = '';
+        document.getElementById('fin-req-ward').value       = '';
+        document.getElementById('fin-req-motivation').value = '';
+        document.getElementById('fin-items-container').innerHTML = '';
+        buildItemRow('fin-items-container');
+        showToast('Request submitted successfully.');
+      } catch(e) {
+        errEl.textContent = 'Failed to submit. Please try again.';
+        errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Submit Request';
+    });
+
+    // ── Submit: WhatsApp request ──────────────────────────────────────
+    document.getElementById('btn-wa-submit')?.addEventListener('click', async () => {
+      const name       = document.getElementById('wa-name').value.trim();
+      const ward       = document.getElementById('wa-ward').value.trim();
+      const motivation = document.getElementById('wa-motivation').value.trim();
+      const waNote     = document.getElementById('wa-note').value.trim();
+      const { items, valid } = collectItems('wa-items-container');
+      const errEl = document.getElementById('wa-req-error');
+
+      if (!name || !ward || !motivation || !valid) {
+        errEl.textContent = 'Please fill in name, ward, motivation, and at least one item.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+
+      const btn = document.getElementById('btn-wa-submit');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      try {
+        await saveRequest({
+          channel:         'whatsapp',
+          requestedByUid:  currentUser.uid,
+          requestedByName: name,
+          ward, motivation, items,
+          status: 'pending',
+          whatsappNote: waNote,
+        });
+        ['wa-name','wa-ward','wa-motivation','wa-note'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        document.getElementById('wa-items-container').innerHTML = '';
+        buildItemRow('wa-items-container');
+        showToast('WhatsApp request logged successfully.');
+      } catch(e) {
+        errEl.textContent = 'Failed to submit. Please try again.';
+        errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Submit WhatsApp Request';
+    });
+
+    // ── Scan: read and review ─────────────────────────────────────────
+    document.getElementById('btn-read-scan')?.addEventListener('click', async () => {
+      const file    = document.getElementById('scan-file').files[0];
+      const name    = document.getElementById('scan-name').value.trim();
+      const ward    = document.getElementById('scan-ward').value.trim();
+      const errEl   = document.getElementById('scan-upload-error');
+
+      if (!file || !name || !ward) {
+        errEl.textContent = 'Please enter name, ward, and select a file.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+
+      document.getElementById('btn-read-scan').classList.add('hidden');
+      document.getElementById('scan-reading').classList.remove('hidden');
+
+      try {
+        const extracted = await readScanWithAI(file);
+        // Populate review panel
+        document.getElementById('scan-items-container').innerHTML = '';
+        extracted.forEach(item => {
+          // Try to match to formulary
+          const match = formularyCache.find(p =>
+            p.description.toLowerCase().includes(item.description.toLowerCase().split(' ')[0])
+          );
+          buildItemRow('scan-items-container', {
+            description: item.description,
+            qty:         item.qty || 1,
+            productId:   match?.id   || '',
+            inFormulary: !!match,
+            packSize:    match?.packSize  || '',
+            schedule:    match?.schedule  || '',
+          });
+        });
+        document.getElementById('scan-step-upload').classList.add('hidden');
+        document.getElementById('scan-step-review').classList.remove('hidden');
+      } catch(e) {
+        errEl.textContent = 'AI scan reading failed. Please try again or log manually.';
+        errEl.classList.remove('hidden');
+        document.getElementById('btn-read-scan').classList.remove('hidden');
+        document.getElementById('scan-reading').classList.add('hidden');
+      }
+    });
+
+    // ── Scan: back to upload ──────────────────────────────────────────
+    document.getElementById('btn-scan-back')?.addEventListener('click', () => {
+      document.getElementById('scan-step-review').classList.add('hidden');
+      document.getElementById('scan-step-upload').classList.remove('hidden');
+      document.getElementById('btn-read-scan').classList.remove('hidden');
+      document.getElementById('scan-reading').classList.add('hidden');
+      document.getElementById('scan-items-container').innerHTML = '';
+    });
+
+    // ── Scan: save reviewed request ───────────────────────────────────
+    document.getElementById('btn-scan-save')?.addEventListener('click', async () => {
+      const motivation = document.getElementById('scan-motivation').value.trim();
+      const name       = document.getElementById('scan-name').value.trim();
+      const ward       = document.getElementById('scan-ward').value.trim();
+      const { items, valid } = collectItems('scan-items-container');
+      const errEl = document.getElementById('scan-review-error');
+
+      if (!motivation || !valid) {
+        errEl.textContent = 'Please add a motivation and confirm all items before saving.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+
+      const btn = document.getElementById('btn-scan-save');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        await saveRequest({
+          channel:         'scan',
+          requestedByUid:  currentUser.uid,
+          requestedByName: name,
+          ward, motivation, items,
+          status: 'pending',
+          whatsappNote: '',
+        });
+        // Reset scan form
+        document.getElementById('scan-name').value       = '';
+        document.getElementById('scan-ward').value       = '';
+        document.getElementById('scan-motivation').value = '';
+        document.getElementById('scan-file').value       = '';
+        document.getElementById('scan-items-container').innerHTML = '';
+        document.getElementById('scan-step-review').classList.add('hidden');
+        document.getElementById('scan-step-upload').classList.remove('hidden');
+        document.getElementById('btn-read-scan').classList.remove('hidden');
+        showToast('Scan request saved successfully.');
+        // Switch to All Requests tab
+        document.querySelector('[data-tab="all-requests"]')?.click();
+      } catch(e) {
+        errEl.textContent = 'Failed to save. Please try again.';
+        errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Save Request';
+    });
+
+    // ── Hook into page navigation to init requests page ───────────────
+    // Extend showPage to trigger Step 4 init when requests page opens
+    const _origShowPage = showPage;
+    window._requestsInitDone = false;
+    function showPageExtended(name) {
+      _origShowPage(name);
+      if (name === 'requests' && !window._requestsInitDone && currentUser) {
+        window._requestsInitDone = true;
+        initRequestsPage(currentUser, currentRole);
+      }
+    }
+    // Re-bind nav items to extended showPage
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const page = item.dataset.page;
+        if (page) showPageExtended(page);
+      });
+    });
+
+    // Store user/role when auth resolves — patch into existing handler
+    const _origOnAuth = onAuthStateChanged;
+    // We extend via a second onAuthStateChanged listener
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        getDoc(doc(db, 'access_control', user.uid)).then(snap => {
+          if (snap.exists()) {
+            const levels = snap.data().accessLevels || [];
+            currentUser = user;
+            currentRole = getRoleLabel(levels);
+          }
+        });
+      }
+    });
 
   </script>
 </body>
