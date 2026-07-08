@@ -1010,10 +1010,10 @@
               </div>
             </div>
 
-            <!-- Tab: New web request (Finance creating on behalf of ward) -->
+            <!-- Tab: Web Request (Finance creating + list of web requests) -->
             <div class="tab-panel hidden" id="tab-new-web-request">
-              <div class="card">
-                <div class="card-title">New Stock Request</div>
+              <div class="card mb-20">
+                <div class="card-title">New Web Request</div>
                 <div class="form-row">
                   <label class="form-label">Requested by (name) <span class="req">*</span></label>
                   <input type="text" id="fin-req-name" class="form-input" placeholder="Staff member name" />
@@ -1035,6 +1035,14 @@
                 <div id="fin-req-error" class="form-error hidden"></div>
                 <div class="form-actions">
                   <button class="btn-primary" id="btn-fin-submit-request">Submit Request</button>
+                </div>
+              </div>
+
+              <!-- Web requests list -->
+              <div class="card">
+                <div class="card-title">Submitted Web Requests</div>
+                <div id="web-requests-list">
+                  <div class="list-loading">Loading…</div>
                 </div>
               </div>
             </div>
@@ -1605,7 +1613,7 @@
         const chBadge = `<span class="channel-badge ${req.channel}">${req.channel}</span>`;
         const itemChips = (req.items || []).map(i =>
           `<span class="item-chip ${i.inFormulary ? '' : 'non-formulary'}">
-            ${i.inFormulary ? '' : '⚠ '}${i.description} ×${i.qtyRequested}
+            ${!i.inFormulary ? '⚠ ' : ''}${i.description} ×${i.qtyRequested}
            </span>`
         ).join('');
         div.innerHTML = `
@@ -1647,6 +1655,18 @@
       }
       onSnapshot(q, snap => {
         renderRequestList('finance-requests-list',
+          snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+    }
+
+    function subscribeWebRequests() {
+      const q = query(
+        collection(db,'pharmacy_requests'),
+        where('channel','==','web'),
+        orderBy('createdAt','desc')
+      );
+      onSnapshot(q, snap => {
+        renderRequestList('web-requests-list',
           snap.docs.map(d => ({ id: d.id, ...d.data() })));
       });
     }
@@ -1723,8 +1743,9 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         // Add first item rows to each form
         buildItemRow('fin-items-container');
         buildItemRow('wa-items-container');
-        // Subscribe to all requests
+        // Subscribe to all requests and web requests
         subscribeFinanceRequests('');
+        subscribeWebRequests();
       }
     }
 
