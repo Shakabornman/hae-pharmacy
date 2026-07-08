@@ -986,7 +986,7 @@
             <!-- Tab bar -->
             <div class="tab-bar mb-20">
               <button class="tab-btn active" data-tab="all-requests">All Requests</button>
-              <button class="tab-btn" data-tab="new-web-request">New Web Request</button>
+              <button class="tab-btn" data-tab="new-web-request">Web Request</button>
               <button class="tab-btn" data-tab="log-whatsapp">Log WhatsApp</button>
               <button class="tab-btn" data-tab="upload-scan">Upload Scan</button>
             </div>
@@ -1436,6 +1436,18 @@
       row.dataset.inFormulary = prefill?.inFormulary !== undefined
         ? String(prefill.inFormulary) : '';
 
+      // Determine initial badge state
+      const initBadgeClass = prefill?.inFormulary === false
+        ? 'item-badge non-formulary'
+        : prefill?.inFormulary === true
+          ? 'item-badge formulary'
+          : 'item-badge hidden';  // hide on empty rows
+      const initBadgeText = prefill?.inFormulary === false
+        ? '⚠ Not on formulary'
+        : prefill?.inFormulary === true
+          ? '✓ Formulary'
+          : '';
+
       row.innerHTML = `
         <div class="item-search-wrap">
           <input type="text" class="item-input" id="item-desc-${id}"
@@ -1447,12 +1459,7 @@
             ${prefill?.packSize ? `📦 ${prefill.packSize}` : ''}
             ${prefill?.schedule ? ` · SCH ${prefill.schedule}` : ''}
           </div>
-          <span class="item-badge ${prefill?.inFormulary === false
-            ? 'non-formulary' : (prefill?.inFormulary ? 'formulary' : 'hidden')}"
-            id="item-badge-${id}">
-            ${prefill?.inFormulary === false ? '⚠ Not on formulary'
-              : (prefill?.inFormulary ? '✓ Formulary' : '')}
-          </span>
+          <span class="${initBadgeClass}" id="item-badge-${id}">${initBadgeText}</span>
         </div>
         <div>
           <input type="number" class="item-qty" id="item-qty-${id}"
@@ -1507,7 +1514,8 @@
               ${p.packSize ? '· ' + p.packSize : ''}
               ${p.schedule ? '· SCH ' + p.schedule : ''}</div>
           `;
-          li.addEventListener('mousedown', () => {
+          li.addEventListener('mousedown', (e) => {
+            e.preventDefault();  // prevent blur firing before mousedown completes
             input.value             = p.description;
             row.dataset.productId   = p.id;
             row.dataset.inFormulary = 'true';
@@ -1518,6 +1526,7 @@
             badge.textContent = '✓ Formulary';
             badge.className   = 'item-badge formulary';
             acList.classList.add('hidden');
+            input.blur();
           });
           acList.appendChild(li);
         });
@@ -1992,5 +2001,3 @@ If you cannot read an item clearly, include it with description marked as "[uncl
   </script>
 </body>
 </html>
-
-
