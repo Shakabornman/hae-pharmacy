@@ -1667,6 +1667,9 @@
       });
     }
 
+    // Store web requests in memory for tab-click rendering
+    let webRequestsCache = [];
+
     function subscribeWebRequests() {
       const q = query(
         collection(db,'pharmacy_requests'),
@@ -1674,12 +1677,10 @@
         orderBy('createdAt','desc')
       );
       onSnapshot(q, snap => {
-        console.log('Web requests snapshot:', snap.docs.length, 'docs');
-        snap.docs.forEach(d => console.log('  doc:', d.id, d.data().channel, d.data().ward));
+        webRequestsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Only render if the element exists (tab is visible)
         const el = document.getElementById('web-requests-list');
-        console.log('web-requests-list element:', el);
-        renderRequestList('web-requests-list',
-          snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (el) renderRequestList('web-requests-list', webRequestsCache);
       });
     }
 
@@ -1769,6 +1770,10 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(`tab-${tabId}`)?.classList.add('active');
+        // Render web requests list when tab becomes visible
+        if (tabId === 'new-web-request' && webRequestsCache.length > 0) {
+          renderRequestList('web-requests-list', webRequestsCache);
+        }
       });
     });
 
