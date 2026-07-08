@@ -1674,6 +1674,10 @@
         orderBy('createdAt','desc')
       );
       onSnapshot(q, snap => {
+        console.log('Web requests snapshot:', snap.docs.length, 'docs');
+        snap.docs.forEach(d => console.log('  doc:', d.id, d.data().channel, d.data().ward));
+        const el = document.getElementById('web-requests-list');
+        console.log('web-requests-list element:', el);
         renderRequestList('web-requests-list',
           snap.docs.map(d => ({ id: d.id, ...d.data() })));
       });
