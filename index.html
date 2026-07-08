@@ -1236,12 +1236,7 @@
       if (nav)  nav.classList.add('active');
     }
 
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const page = item.dataset.page;
-        if (page) showPage(page);
-      });
-    });
+    // Nav binding handled by showPageExtended — defined after Step 4 init
 
     // ── Role helpers ──────────────────────────────────────────────────
     const PHARMACY_TIERS = ['executive','finance','nursing'];
@@ -1285,6 +1280,10 @@
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         showScreen('login');
+        // Reset Step 4 state on sign out
+        currentUser = null;
+        currentRole = null;
+        window._requestsInitDone = false;
         return;
       }
 
@@ -1294,7 +1293,6 @@
         const acSnap = await getDoc(acRef);
 
         if (!acSnap.exists()) {
-          // No access_control record — treat as no access
           showScreen('denied');
           return;
         }
@@ -1304,10 +1302,13 @@
         const role   = getRoleLabel(levels);
 
         if (!role) {
-          // Authenticated but no pharmacy tier
           showScreen('denied');
           return;
         }
+
+        // Store for Step 4 use — set BEFORE showScreen/showPage
+        currentUser = user;
+        currentRole = role;
 
         // Authorised — set up app shell
         const displayName = user.displayName || user.email.split('@')[0];
@@ -2017,31 +2018,6 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         const page = item.dataset.page;
         if (page) showPageExtended(page);
       });
-    });
-
-    // Store user/role when auth resolves — init requests page if already on that page
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        getDoc(doc(db, 'access_control', user.uid)).then(snap => {
-          if (snap.exists()) {
-            const levels = snap.data().accessLevels || [];
-            currentUser = user;
-            currentRole = getRoleLabel(levels);
-            // If user landed on requests page before role resolved — init now
-            const requestsPage = document.getElementById('page-requests');
-            if (requestsPage && requestsPage.classList.contains('active') &&
-                !window._requestsInitDone) {
-              window._requestsInitDone = true;
-              initRequestsPage(currentUser, currentRole);
-            }
-          }
-        });
-      } else {
-        // Reset on sign out
-        currentUser = null;
-        currentRole = null;
-        window._requestsInitDone = false;
-      }
     });
 
   </script>
