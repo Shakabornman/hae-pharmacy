@@ -2003,12 +2003,10 @@ If you cannot read an item clearly, include it with description marked as "[uncl
     });
 
     // ── Hook into page navigation to init requests page ───────────────
-    // Extend showPage to trigger Step 4 init when requests page opens
-    const _origShowPage = showPage;
     window._requestsInitDone = false;
     function showPageExtended(name) {
-      _origShowPage(name);
-      if (name === 'requests' && !window._requestsInitDone && currentUser) {
+      showPage(name);
+      if (name === 'requests' && !window._requestsInitDone && currentUser && currentRole) {
         window._requestsInitDone = true;
         initRequestsPage(currentUser, currentRole);
       }
@@ -2021,9 +2019,7 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       });
     });
 
-    // Store user/role when auth resolves — patch into existing handler
-    const _origOnAuth = onAuthStateChanged;
-    // We extend via a second onAuthStateChanged listener
+    // Store user/role when auth resolves — init requests page if already on that page
     onAuthStateChanged(auth, (user) => {
       if (user) {
         getDoc(doc(db, 'access_control', user.uid)).then(snap => {
@@ -2031,8 +2027,20 @@ If you cannot read an item clearly, include it with description marked as "[uncl
             const levels = snap.data().accessLevels || [];
             currentUser = user;
             currentRole = getRoleLabel(levels);
+            // If user landed on requests page before role resolved — init now
+            const requestsPage = document.getElementById('page-requests');
+            if (requestsPage && requestsPage.classList.contains('active') &&
+                !window._requestsInitDone) {
+              window._requestsInitDone = true;
+              initRequestsPage(currentUser, currentRole);
+            }
           }
         });
+      } else {
+        // Reset on sign out
+        currentUser = null;
+        currentRole = null;
+        window._requestsInitDone = false;
       }
     });
 
