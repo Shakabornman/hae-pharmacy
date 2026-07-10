@@ -803,6 +803,288 @@
     .channel-badge.web       { background: #EAF0FB; color: var(--mid-blue); }
     .channel-badge.whatsapp  { background: #E8F5E9; color: var(--green); }
     .channel-badge.scan      { background: #F3E5F5; color: #6A1B9A; }
+
+    /* ── Step 5 — Order Creation ────────────────────────────────────── */
+    .orders-panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .orders-panel { min-width: 0; }
+    .mt-20 { margin-top: 20px; }
+
+    .detail-back {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .detail-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    /* Order type buttons */
+    .order-type-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .order-type-btn {
+      flex: 1;
+      padding: 10px 14px;
+      border: 2px solid var(--grey-300);
+      border-radius: var(--radius);
+      background: var(--white);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--grey-600);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .order-type-btn.active {
+      border-color: var(--mid-blue);
+      background: #EAF0FB;
+      color: var(--mid-blue);
+    }
+    .order-type-btn:hover:not(.active) { border-color: var(--grey-600); }
+
+    /* Order lines */
+    .order-line-row {
+      display: grid;
+      grid-template-columns: 1fr 80px 110px 110px 34px;
+      gap: 6px;
+      align-items: start;
+      margin-bottom: 8px;
+      padding: 10px;
+      background: var(--grey-100);
+      border-radius: var(--radius);
+      position: relative;
+    }
+    .order-line-desc {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--navy);
+      padding: 8px 0 2px;
+    }
+    .order-line-sub {
+      font-size: 0.75rem;
+      color: var(--grey-600);
+    }
+    .order-line-input {
+      padding: 7px 8px;
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      width: 100%;
+      outline: none;
+    }
+    .order-line-input:focus { border-color: var(--mid-blue); }
+    .order-line-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      padding-top: 6px;
+    }
+    .btn-ai-search {
+      background: none;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 3px;
+      color: var(--mid-blue);
+      title: "Find generic alternative";
+    }
+    .btn-ai-search:hover { color: var(--navy); }
+
+    /* Request detail */
+    .detail-field { margin-bottom: 10px; }
+    .detail-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--grey-600);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .detail-value {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    .detail-items-list { margin-top: 8px; }
+    .detail-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--grey-100);
+      font-size: 0.85rem;
+    }
+    .detail-item-row:last-child { border-bottom: none; }
+    .detail-item-name { font-weight: 600; color: var(--navy); }
+    .detail-item-qty  { color: var(--grey-600); font-size: 0.8rem; }
+    .btn-use-item {
+      padding: 3px 10px;
+      background: var(--mid-blue);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-use-item:hover { background: var(--navy); }
+    .btn-use-item.used { background: var(--grey-300); cursor: default; }
+
+    /* Orders list items */
+    .order-list-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--grey-100);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .order-list-item:last-child { border-bottom: none; }
+    .order-list-item:hover { background: var(--grey-100); }
+    .order-list-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 3px;
+    }
+    .order-type-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .order-type-badge.presale { background: #EAF0FB; color: var(--mid-blue); }
+    .order-type-badge.buyout  { background: #E8F5E9; color: var(--green); }
+
+    /* AI search results */
+    .ai-result-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--grey-100);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .ai-result-item:last-child { border-bottom: none; }
+    .ai-result-name { font-weight: 600; font-size: 0.88rem; color: var(--navy); }
+    .ai-result-sub  { font-size: 0.75rem; color: var(--grey-600); margin-top: 2px; }
+    .btn-use-alt {
+      padding: 4px 12px;
+      background: var(--teal);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      margin-left: 10px;
+    }
+
+    /* PDF Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 860px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--grey-300);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--navy);
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--grey-600);
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--red); }
+
+    /* PDF preview table */
+    .pdf-preview {
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      color: #1A1A1A;
+    }
+    .pdf-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .pdf-logo { font-size: 13px; font-weight: 700; color: var(--navy); }
+    .pdf-address { font-size: 10px; color: #555; text-align: right; line-height: 1.5; }
+    .pdf-divider {
+      border: none;
+      border-top: 2px solid var(--navy);
+      margin: 8px 0;
+    }
+    .pdf-order-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 10px;
+      font-size: 10px;
+    }
+    .pdf-meta-item { display: flex; gap: 6px; }
+    .pdf-meta-label { font-weight: 700; color: var(--navy); min-width: 80px; }
+    .pdf-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }
+    .pdf-table th {
+      background: var(--navy);
+      color: var(--white);
+      padding: 5px 6px;
+      text-align: left;
+      font-weight: 700;
+    }
+    .pdf-table td {
+      padding: 5px 6px;
+      border-bottom: 1px solid #EEE;
+      vertical-align: top;
+    }
+    .pdf-table tr:nth-child(even) td { background: #F7F9FC; }
+    .pdf-totals {
+      margin-top: 10px;
+      text-align: right;
+      font-size: 10px;
+    }
+    .pdf-total-row { margin-bottom: 2px; }
+    .pdf-total-final { font-weight: 700; font-size: 11px; color: var(--navy); }
+    .pdf-footer {
+      margin-top: 14px;
+      font-size: 9px;
+      color: #777;
+      border-top: 1px solid #CCC;
+      padding-top: 6px;
+    }
   </style>
 </head>
 <body>
@@ -1145,13 +1427,164 @@
           </div>
         </div>
 
+        <!-- ── STEP 5: ORDER CREATION ──────────────────────────────────── -->
         <div class="page-view" id="page-orders">
-          <div class="page-header"><h1>Orders</h1></div>
-          <div class="placeholder-card">
-            <div class="step-badge">Step 5</div>
-            <h2>Order Creation</h2>
-            <p>Buy-out scripts and presales will be created here once Step 5 is built and confirmed.</p>
+          <div class="page-header">
+            <h1>Orders</h1>
+            <p id="orders-page-sub">Create buy-out scripts and presales from stock requests.</p>
           </div>
+
+          <!-- ── Orders list + request detail panel ───────────────────── -->
+          <div id="orders-main-view">
+
+            <!-- Two-panel layout: requests awaiting action | existing orders -->
+            <div class="orders-panels">
+
+              <!-- Left: Requests awaiting action -->
+              <div class="orders-panel">
+                <div class="card">
+                  <div class="card-title-row">
+                    <div class="card-title">Requests Awaiting Action</div>
+                    <select id="orders-req-filter" class="filter-select">
+                      <option value="pending">Pending</option>
+                      <option value="escalated">Escalated</option>
+                      <option value="">All</option>
+                    </select>
+                  </div>
+                  <div id="orders-requests-list">
+                    <div class="list-loading">Loading…</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Existing orders -->
+              <div class="orders-panel">
+                <div class="card">
+                  <div class="card-title-row">
+                    <div class="card-title">Orders</div>
+                    <select id="orders-status-filter" class="filter-select">
+                      <option value="">All</option>
+                      <option value="draft">Draft</option>
+                      <option value="pending_approval">Pending Approval</option>
+                      <option value="approved">Approved</option>
+                      <option value="sent">Sent</option>
+                    </select>
+                  </div>
+                  <div id="orders-list">
+                    <div class="list-loading">Loading…</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Request detail + order builder ───────────────────────── -->
+          <div id="orders-detail-view" class="hidden">
+
+            <!-- Back button -->
+            <div class="detail-back">
+              <button class="btn-secondary" id="btn-orders-back">← Back to Orders</button>
+              <span id="detail-request-title" class="detail-title"></span>
+            </div>
+
+            <div class="orders-panels">
+
+              <!-- Left: Request detail -->
+              <div class="orders-panel">
+                <div class="card">
+                  <div class="card-title">Request Detail</div>
+                  <div id="request-detail-content"></div>
+                </div>
+              </div>
+
+              <!-- Right: Order builder -->
+              <div class="orders-panel">
+                <div class="card" id="order-builder-card">
+                  <div class="card-title">Build Order</div>
+
+                  <!-- Order type selector -->
+                  <div class="form-row">
+                    <label class="form-label">Order Type <span class="req">*</span></label>
+                    <div class="order-type-btns">
+                      <button class="order-type-btn active" data-type="presale">📋 Presale (Beaconmed)</button>
+                      <button class="order-type-btn" data-type="buyout">🏥 Buy-out (Local Pharmacy)</button>
+                    </div>
+                  </div>
+
+                  <!-- Supplier selection -->
+                  <div class="form-row" id="supplier-row">
+                    <label class="form-label">Supplier <span class="req">*</span></label>
+                    <select id="order-supplier" class="form-input">
+                      <option value="">Select supplier…</option>
+                    </select>
+                  </div>
+
+                  <!-- Doctor selection (buy-out only) -->
+                  <div class="form-row hidden" id="doctor-row">
+                    <label class="form-label">Prescribing Doctor <span class="req">*</span></label>
+                    <select id="order-doctor" class="form-input">
+                      <option value="">Select doctor…</option>
+                    </select>
+                  </div>
+
+                  <!-- Order lines -->
+                  <div class="form-row">
+                    <label class="form-label">Order Lines</label>
+                    <div id="order-lines-container"></div>
+                    <button class="btn-add-item" id="btn-add-order-line">+ Add line</button>
+                  </div>
+
+                  <!-- Notes -->
+                  <div class="form-row">
+                    <label class="form-label">Notes</label>
+                    <textarea id="order-notes" class="form-input" rows="2" placeholder="Optional notes for this order"></textarea>
+                  </div>
+
+                  <div id="order-builder-error" class="form-error hidden"></div>
+
+                  <div class="form-actions">
+                    <button class="btn-secondary" id="btn-save-draft">Save Draft</button>
+                    <button class="btn-primary" id="btn-submit-approval">Submit for Approval</button>
+                    <button class="btn-secondary" id="btn-generate-pdf">📄 Preview PDF</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- AI Generic Search panel -->
+            <div class="card mt-20" id="ai-search-panel" style="display:none;">
+              <div class="card-title">🤖 AI Generic / Alternative Search</div>
+              <div class="form-row">
+                <label class="form-label">Searching for alternative to:</label>
+                <div id="ai-search-product" style="font-weight:700;color:var(--navy);padding:6px 0;"></div>
+              </div>
+              <div id="ai-search-results">
+                <div class="list-loading">Searching formulary…</div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-secondary" id="btn-close-ai-search">Close</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── PDF Preview Modal ──────────────────────────────────────── -->
+          <div id="pdf-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+              <div class="modal-header">
+                <span id="pdf-modal-title">Order Preview</span>
+                <button class="modal-close" id="btn-close-pdf">×</button>
+              </div>
+              <div id="pdf-preview-content" style="overflow-y:auto;max-height:70vh;"></div>
+              <div class="form-actions" style="padding:16px 20px 20px;">
+                <button class="btn-primary" id="btn-download-pdf">⬇ Download PDF</button>
+                <button class="btn-secondary" id="btn-close-pdf-2">Close</button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div class="page-view" id="page-approval">
@@ -1209,8 +1642,11 @@
     import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { getFirestore, doc, getDoc }
+    import { getFirestore, doc, getDoc, collection, addDoc, query,
+             where, orderBy, onSnapshot, serverTimestamp, updateDoc, getDocs }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
+      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
     // ── Init ──────────────────────────────────────────────────────────
     const app  = initializeApp(firebaseConfig);
@@ -1394,26 +1830,16 @@
     // STEP 4 — REQUEST CAPTURE
     // ════════════════════════════════════════════════════════════════
 
-    import { collection, addDoc, query, where, orderBy,
-             onSnapshot, serverTimestamp }
-      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
     // ── State ─────────────────────────────────────────────────────────
     let currentUser    = null;
     let currentRole    = null;
-    let formularyCache = [];   // loaded once on first request page visit
+    let formularyCache = [];
     let formularyLoaded = false;
-
-    // Extend onAuthStateChanged to store user/role for Step 4
-    // We patch this by re-reading after the existing handler sets up the app.
-    // The existing handler calls showScreen('app') — we hook into page nav.
 
     // ── Load formulary into memory (once) ─────────────────────────────
     async function loadFormulary() {
       if (formularyLoaded) return;
       try {
-        const { getDocs } = await import(
-          'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
         const snap = await getDocs(collection(db, 'pharmacy_products'));
         formularyCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         formularyLoaded = true;
@@ -2007,11 +2433,16 @@ If you cannot read an item clearly, include it with description marked as "[uncl
 
     // ── Hook into page navigation to init requests page ───────────────
     window._requestsInitDone = false;
+    window._ordersInitDone   = false;
     function showPageExtended(name) {
       showPage(name);
       if (name === 'requests' && !window._requestsInitDone && currentUser && currentRole) {
         window._requestsInitDone = true;
         initRequestsPage(currentUser, currentRole);
+      }
+      if (name === 'orders' && !window._ordersInitDone && currentUser && currentRole) {
+        window._ordersInitDone = true;
+        initOrdersPage(currentUser, currentRole);
       }
     }
     // Re-bind nav items to extended showPage
@@ -2021,6 +2452,728 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         if (page) showPageExtended(page);
       });
     });
+
+    // ════════════════════════════════════════════════════════════════
+    // STEP 5 — ORDER CREATION
+    // ════════════════════════════════════════════════════════════════
+
+    const storage = getStorage(app);
+
+    // ── State ─────────────────────────────────────────────────────────
+    let suppliersCache = [];
+    let doctorsCache   = [];
+    let currentRequest = null;
+    let currentOrderType = 'presale';
+    let aiSearchTargetLineId = null;
+
+    const HAE_LOGO_URL = 'https://drive.google.com/uc?export=view&id=1bRWLpjccNC7wMJsKBFDowbFM-4dyRLyR';
+
+    // ── Load suppliers and doctors ────────────────────────────────────
+    async function loadSuppliersAndDoctors() {
+      if (suppliersCache.length > 0) return;
+      try {
+        const [supSnap, docSnap] = await Promise.all([
+          getDocs(collection(db, 'pharmacy_suppliers')),
+          getDocs(collection(db, 'pharmacy_doctors')),
+        ]);
+        suppliersCache = supSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .filter(s => s.active !== false);
+        doctorsCache   = docSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .filter(d => d.active !== false);
+      } catch(e) { console.error('Load suppliers/doctors:', e); }
+    }
+
+    // ── Populate supplier dropdown ────────────────────────────────────
+    function populateSupplierDropdown(type) {
+      const sel = document.getElementById('order-supplier');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Select supplier…</option>';
+      suppliersCache
+        .filter(s => type === 'presale' ? s.type === 'primary' : s.type === 'buyout')
+        .forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id; opt.textContent = s.name;
+          sel.appendChild(opt);
+        });
+    }
+
+    // ── Populate doctor dropdown ──────────────────────────────────────
+    function populateDoctorDropdown() {
+      const sel = document.getElementById('order-doctor');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Select doctor…</option>';
+      doctorsCache.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id; opt.textContent = `${d.name} — ${d.hpcsaNo}`;
+        sel.appendChild(opt);
+      });
+    }
+
+    // ── Build one order line row ──────────────────────────────────────
+    let orderLineCounter = 0;
+    function buildOrderLine(containerId, prefill = null) {
+      const id  = ++orderLineCounter;
+      const row = document.createElement('div');
+      row.className = 'order-line-row';
+      row.dataset.lineId    = id;
+      row.dataset.productId = prefill?.productId || '';
+      row.dataset.nappi     = prefill?.nappiCode  || '';
+      row.dataset.tfm       = prefill?.tfmCode    || '';
+      row.dataset.schedule  = prefill?.schedule   || '';
+
+      row.innerHTML = `
+        <div>
+          <div class="order-line-desc" id="ol-desc-${id}">${prefill?.description || 'New item'}</div>
+          <div class="order-line-sub">${[
+            prefill?.packSize ? prefill.packSize : '',
+            prefill?.schedule ? 'SCH ' + prefill.schedule : '',
+            prefill?.inFormulary === false ? '⚠ Not on formulary' : ''
+          ].filter(Boolean).join(' · ')}</div>
+          <input type="text" class="order-line-input" id="ol-desc-input-${id}"
+            placeholder="Description" value="${prefill?.description || ''}"
+            style="margin-top:6px;" />
+        </div>
+        <div>
+          <div class="order-line-sub" style="margin-bottom:4px;">Qty</div>
+          <input type="number" class="order-line-input" id="ol-qty-${id}"
+            min="1" value="${prefill?.qtyRequested || 1}" placeholder="Qty" />
+        </div>
+        <div>
+          <div class="order-line-sub" style="margin-bottom:4px;">Price Excl</div>
+          <input type="number" class="order-line-input" id="ol-price-${id}"
+            step="0.01" value="${prefill?.currentPriceExcl || ''}" placeholder="0.00" />
+        </div>
+        <div>
+          <div class="order-line-sub" style="margin-bottom:4px;">Pack Size</div>
+          <input type="text" class="order-line-input" id="ol-pack-${id}"
+            value="${prefill?.packSize || ''}" placeholder="e.g. 10 tabs" />
+        </div>
+        <div class="order-line-actions">
+          <button class="btn-ai-search" title="Find generic/alternative" data-line-id="${id}">🔍</button>
+          <button class="btn-remove-item" title="Remove" data-line-id="${id}">×</button>
+        </div>
+      `;
+
+      // Remove
+      row.querySelector('.btn-remove-item').addEventListener('click', () => row.remove());
+
+      // AI search
+      row.querySelector('.btn-ai-search').addEventListener('click', () => {
+        const desc = document.getElementById(`ol-desc-input-${id}`)?.value || prefill?.description || '';
+        openAISearch(id, desc);
+      });
+
+      document.getElementById(containerId).appendChild(row);
+      return row;
+    }
+
+    // ── Collect order lines ───────────────────────────────────────────
+    function collectOrderLines() {
+      const rows  = document.querySelectorAll('#order-lines-container .order-line-row');
+      const lines = [];
+      rows.forEach(row => {
+        const id    = row.dataset.lineId;
+        const desc  = document.getElementById(`ol-desc-input-${id}`)?.value.trim();
+        const qty   = parseFloat(document.getElementById(`ol-qty-${id}`)?.value) || 1;
+        const price = parseFloat(document.getElementById(`ol-price-${id}`)?.value) || 0;
+        const pack  = document.getElementById(`ol-pack-${id}`)?.value.trim() || '';
+        if (!desc) return;
+        lines.push({
+          productId:   row.dataset.productId || null,
+          description: desc,
+          nappiCode:   row.dataset.nappi   || '',
+          tfmCode:     row.dataset.tfm     || '',
+          schedule:    row.dataset.schedule || '',
+          packSize:    pack,
+          qtyOrdered:  qty,
+          unitPriceExcl: price,
+          totalExcl:   Math.round(qty * price * 100) / 100,
+          qtyDelivered:  0,
+          qtyOutstanding: qty,
+          status:      'open',
+        });
+      });
+      return lines;
+    }
+
+    // ── Open request detail ───────────────────────────────────────────
+    async function openRequestDetail(req) {
+      currentRequest = req;
+      document.getElementById('orders-main-view').classList.add('hidden');
+      document.getElementById('orders-detail-view').classList.remove('hidden');
+      document.getElementById('detail-request-title').textContent =
+        `${req.ward} — ${req.requestedByName || ''}`;
+
+      // Render request detail
+      const date = req.createdAt?.toDate
+        ? req.createdAt.toDate().toLocaleDateString('en-ZA', {day:'2-digit',month:'short',year:'numeric'})
+        : '—';
+      const detailEl = document.getElementById('request-detail-content');
+      detailEl.innerHTML = `
+        <div class="detail-field">
+          <div class="detail-label">Ward</div>
+          <div class="detail-value">${req.ward}</div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-label">Requested by</div>
+          <div class="detail-value">${req.requestedByName || '—'} <span class="channel-badge ${req.channel}">${req.channel}</span></div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-label">Date</div>
+          <div class="detail-value">${date}</div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-label">Motivation</div>
+          <div class="detail-value">${req.motivation || '—'}</div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-label">Items — click + to add to order</div>
+          <div class="detail-items-list">
+            ${(req.items || []).map((item, i) => `
+              <div class="detail-item-row">
+                <div>
+                  <div class="detail-item-name">${item.description}</div>
+                  <div class="detail-item-qty">Qty: ${item.qtyRequested} ${item.inFormulary ? '✓' : '⚠ Not on formulary'}</div>
+                </div>
+                <button class="btn-use-item" data-item-idx="${i}">+ Add to order</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ${req.scanUrl ? `<div class="detail-field">
+          <div class="detail-label">Original scan</div>
+          <div><a href="${Array.isArray(req.scanUrl) ? req.scanUrl[0] : req.scanUrl}" target="_blank" style="color:var(--mid-blue);">View scan ↗</a></div>
+        </div>` : ''}
+      `;
+
+      // Add to order buttons
+      detailEl.querySelectorAll('.btn-use-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx  = parseInt(btn.dataset.itemIdx);
+          const item = req.items[idx];
+          // Look up formulary data for this item
+          const prod = formularyCache.find(p => p.id === item.productId) || {};
+          buildOrderLine('order-lines-container', {
+            productId:       item.productId || '',
+            description:     item.description,
+            nappiCode:       prod.nappiCode || '',
+            tfmCode:         prod.tfmCode   || '',
+            schedule:        prod.schedule  || '',
+            packSize:        prod.packSize  || '',
+            currentPriceExcl: prod.currentPriceExcl || 0,
+            qtyRequested:    item.qtyRequested,
+            inFormulary:     item.inFormulary,
+          });
+          btn.textContent = '✓ Added';
+          btn.classList.add('used');
+          btn.disabled = true;
+        });
+      });
+
+      // Load suppliers and doctors
+      await loadSuppliersAndDoctors();
+      populateSupplierDropdown('presale');
+      populateDoctorDropdown();
+    }
+
+    // ── Order type toggle ─────────────────────────────────────────────
+    document.querySelectorAll('.order-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentOrderType = btn.dataset.type;
+        populateSupplierDropdown(currentOrderType);
+        const doctorRow = document.getElementById('doctor-row');
+        if (doctorRow) {
+          doctorRow.classList.toggle('hidden', currentOrderType !== 'buyout');
+        }
+      });
+    });
+
+    // ── AI Generic Search ─────────────────────────────────────────────
+    function openAISearch(lineId, description) {
+      aiSearchTargetLineId = lineId;
+      document.getElementById('ai-search-panel').style.display = 'block';
+      document.getElementById('ai-search-product').textContent = description;
+      document.getElementById('ai-search-results').innerHTML =
+        '<div class="list-loading">Searching formulary…</div>';
+
+      // Search formulary for matches
+      const term    = description.toLowerCase().split(' ')[0];
+      const results = formularyCache.filter(p =>
+        p.description?.toLowerCase().includes(term) ||
+        p.genericName?.toLowerCase().includes(term)
+      ).filter(p => p.description !== description).slice(0, 10);
+
+      if (results.length > 0) {
+        renderAIResults(results);
+      } else {
+        // No formulary match — ask Claude for suggestions
+        askClaudeForAlternative(description);
+      }
+    }
+
+    function renderAIResults(results) {
+      const el = document.getElementById('ai-search-results');
+      if (!el) return;
+      if (results.length === 0) {
+        el.innerHTML = '<div class="list-empty">No formulary alternatives found.</div>';
+        return;
+      }
+      el.innerHTML = '';
+      results.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'ai-result-item';
+        div.innerHTML = `
+          <div>
+            <div class="ai-result-name">${p.description}</div>
+            <div class="ai-result-sub">${[p.genericName, p.packSize, p.schedule ? 'SCH '+p.schedule : ''].filter(Boolean).join(' · ')}</div>
+            ${p.currentPriceExcl ? `<div class="ai-result-sub">R${p.currentPriceExcl.toFixed(2)} excl</div>` : ''}
+          </div>
+          <button class="btn-use-alt">Use this</button>
+        `;
+        div.querySelector('.btn-use-alt').addEventListener('click', () => {
+          const id = aiSearchTargetLineId;
+          if (id) {
+            const descInput = document.getElementById(`ol-desc-input-${id}`);
+            const packInput = document.getElementById(`ol-pack-${id}`);
+            const priceInput = document.getElementById(`ol-price-${id}`);
+            const row = document.querySelector(`[data-line-id="${id}"]`);
+            if (descInput)  descInput.value  = p.description;
+            if (packInput)  packInput.value  = p.packSize || '';
+            if (priceInput) priceInput.value = p.currentPriceExcl || '';
+            if (row) {
+              row.dataset.productId = p.id;
+              row.dataset.nappi     = p.nappiCode || '';
+              row.dataset.tfm       = p.tfmCode   || '';
+              row.dataset.schedule  = p.schedule  || '';
+              row.querySelector('.order-line-desc').textContent = p.description;
+            }
+          }
+          document.getElementById('ai-search-panel').style.display = 'none';
+        });
+        el.appendChild(div);
+      });
+    }
+
+    async function askClaudeForAlternative(description) {
+      try {
+        const resp = await fetch(PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 512,
+            messages: [{
+              role: 'user',
+              content: `You are a South African hospital pharmacy assistant. 
+The following item was requested but may not be available or needs a generic substitute: "${description}".
+List up to 5 possible generic alternatives or equivalent products available in South Africa.
+For each, provide: name, active ingredient, typical pack size.
+Respond ONLY with a JSON array. Example:
+[{"description":"PRODUCT NAME","genericName":"active ingredient","packSize":"10 tabs"}]`
+            }]
+          })
+        });
+        const data  = await resp.json();
+        const text  = data.content?.[0]?.text || '[]';
+        const clean = text.replace(/```json|```/g,'').trim();
+        const suggestions = JSON.parse(clean);
+        // Mark as AI suggestions (not from formulary)
+        const enriched = suggestions.map(s => ({
+          ...s, id: null, currentPriceExcl: null,
+          aiSuggestion: true
+        }));
+        renderAIResults(enriched);
+      } catch(e) {
+        document.getElementById('ai-search-results').innerHTML =
+          '<div class="list-empty">Search failed. Try a different search term.</div>';
+      }
+    }
+
+    document.getElementById('btn-close-ai-search')?.addEventListener('click', () => {
+      document.getElementById('ai-search-panel').style.display = 'none';
+    });
+
+    // ── Save order to Firestore ───────────────────────────────────────
+    async function saveOrder(status) {
+      const supplierId = document.getElementById('order-supplier')?.value;
+      const doctorId   = document.getElementById('order-doctor')?.value;
+      const notes      = document.getElementById('order-notes')?.value.trim() || '';
+      const lines      = collectOrderLines();
+      const errEl      = document.getElementById('order-builder-error');
+
+      if (!supplierId) {
+        errEl.textContent = 'Please select a supplier.'; errEl.classList.remove('hidden'); return null;
+      }
+      if (currentOrderType === 'buyout' && !doctorId) {
+        errEl.textContent = 'Please select a prescribing doctor for buy-out.'; errEl.classList.remove('hidden'); return null;
+      }
+      if (lines.length === 0) {
+        errEl.textContent = 'Please add at least one item to the order.'; errEl.classList.remove('hidden'); return null;
+      }
+      errEl.classList.add('hidden');
+
+      const supplier = suppliersCache.find(s => s.id === supplierId);
+      const doctor   = doctorsCache.find(d => d.id === doctorId);
+      const totalEstExcl = lines.reduce((sum, l) => sum + (l.totalExcl || 0), 0);
+      const totalEstIncl = Math.round(totalEstExcl * 1.15 * 100) / 100;
+
+      const orderDoc = {
+        orderType:      currentOrderType,
+        requestId:      currentRequest?.id || null,
+        supplierId,
+        supplierName:   supplier?.name || '',
+        doctorId:       doctorId || null,
+        doctorName:     doctor?.name || null,
+        hpcsaNo:        doctor?.hpcsaNo || null,
+        preNumber:      '',
+        status,
+        totalEstExcl,
+        totalEstIncl,
+        notes,
+        createdBy:      currentUser.uid,
+        createdAt:      serverTimestamp(),
+        updatedAt:      serverTimestamp(),
+        approvedBy:     null,
+        approvedAt:     null,
+        rejectedBy:     null,
+        rejectionReason: null,
+        sentAt:         null,
+        ward:           currentRequest?.ward || '',
+        requestedByName: currentRequest?.requestedByName || '',
+      };
+
+      try {
+        const orderRef = await addDoc(collection(db, 'pharmacy_orders'), orderDoc);
+        // Write order lines
+        const batch = db.batch ? db.batch() : null;
+        for (const line of lines) {
+          const lineRef = doc(collection(db, 'pharmacy_order_lines'));
+          const lineDoc = { ...line, orderId: orderRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+          if (batch) batch.set(lineRef, lineDoc);
+          else await addDoc(collection(db, 'pharmacy_order_lines'), lineDoc);
+        }
+        if (batch) await batch.commit();
+
+        // Update request status
+        if (currentRequest?.id) {
+          await updateDoc(doc(db, 'pharmacy_requests', currentRequest.id), {
+            status:    status === 'pending_approval' ? 'escalated' : 'escalated',
+            orderId:   orderRef.id,
+            updatedAt: serverTimestamp(),
+          });
+        }
+        return { orderId: orderRef.id, lines, orderDoc };
+      } catch(e) {
+        console.error('Save order:', e);
+        errEl.textContent = `Failed to save order: ${e.message}`;
+        errEl.classList.remove('hidden');
+        return null;
+      }
+    }
+
+    // ── Generate PDF preview ──────────────────────────────────────────
+    function generateOrderPDF(orderDoc, lines, orderId) {
+      const isPresale  = orderDoc.orderType === 'presale';
+      const orderDate  = new Date().toLocaleDateString('en-ZA', {day:'2-digit',month:'short',year:'numeric'});
+      const totalExcl  = lines.reduce((s,l) => s+(l.totalExcl||0), 0);
+      const vat        = Math.round(totalExcl*0.15*100)/100;
+      const totalIncl  = Math.round((totalExcl+vat)*100)/100;
+      const tbc        = lines.filter(l => !l.unitPriceExcl).length;
+
+      const colsPresale = `
+        <th style="width:4%">#</th>
+        <th style="width:10%">NAPPI</th>
+        <th style="width:8%">TFM</th>
+        <th style="width:30%">Description</th>
+        <th style="width:5%">Qty</th>
+        <th style="width:5%">SCH</th>
+        <th style="width:10%">Pack</th>
+        <th style="width:9%">Price Excl</th>
+        <th style="width:9%">Price Incl</th>
+        <th style="width:10%">Status</th>`;
+
+      const colsBuyout = `
+        <th style="width:4%">#</th>
+        <th style="width:35%">Description</th>
+        <th style="width:8%">Qty</th>
+        <th style="width:14%">Pack Size</th>
+        <th style="width:12%">Price Excl</th>
+        <th style="width:12%">Price Incl</th>
+        <th style="width:15%">Status</th>`;
+
+      const rowsPresale = lines.map((l,i) => {
+        const priceIncl = l.unitPriceExcl ? Math.round(l.unitPriceExcl*1.15*100)/100 : null;
+        const status    = l.unitPriceExcl ? 'CONFIRMED' : 'TBC';
+        const statusCol = l.unitPriceExcl ? '#1A5C2A' : '#7A5000';
+        const statusBg  = l.unitPriceExcl ? '#D6EDD6'  : '#FFF3CD';
+        return `<tr>
+          <td>${i+1}</td>
+          <td>${l.nappiCode||'—'}</td>
+          <td>${l.tfmCode||'—'}</td>
+          <td><strong>${l.description}</strong>${l.packSize ? '<br><span style="color:#666;font-size:9px">'+l.packSize+'</span>' : ''}</td>
+          <td>${l.qtyOrdered}</td>
+          <td>${l.schedule||'—'}</td>
+          <td>${l.packSize||'—'}</td>
+          <td>${l.unitPriceExcl ? 'R'+l.unitPriceExcl.toFixed(2) : '—'}</td>
+          <td>${priceIncl ? 'R'+priceIncl.toFixed(2) : '—'}</td>
+          <td style="background:${statusBg};color:${statusCol};font-weight:700;font-size:9px">${status}</td>
+        </tr>`;
+      }).join('');
+
+      const rowsBuyout = lines.map((l,i) => {
+        const priceIncl = l.unitPriceExcl ? Math.round(l.unitPriceExcl*1.15*100)/100 : null;
+        const status    = l.unitPriceExcl ? 'CONFIRMED' : 'TBC';
+        const statusCol = l.unitPriceExcl ? '#1A5C2A' : '#7A5000';
+        const statusBg  = l.unitPriceExcl ? '#D6EDD6'  : '#FFF3CD';
+        return `<tr>
+          <td>${i+1}</td>
+          <td><strong>${l.description}</strong></td>
+          <td>${l.qtyOrdered}</td>
+          <td>${l.packSize||'—'}</td>
+          <td>${l.unitPriceExcl ? 'R'+l.unitPriceExcl.toFixed(2) : '—'}</td>
+          <td>${priceIncl ? 'R'+priceIncl.toFixed(2) : '—'}</td>
+          <td style="background:${statusBg};color:${statusCol};font-weight:700;font-size:9px">${status}</td>
+        </tr>`;
+      }).join('');
+
+      const doctorSection = !isPresale && orderDoc.doctorName ? `
+        <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:10px;border-top:1px solid #CCC;padding-top:8px;">
+          <div><span style="font-weight:700">Doctor:</span> ${orderDoc.doctorName}</div>
+          <div><span style="font-weight:700">HPCSA No:</span> ${orderDoc.hpcsaNo||'—'}</div>
+          <div><span style="font-weight:700">Signature:</span> ____________________</div>
+        </div>` : '';
+
+      return `
+        <div class="pdf-preview">
+          <div class="pdf-header-row">
+            <div>
+              <div class="pdf-logo">HOSPITAL AT EKHAYA</div>
+              <div style="font-size:9px;color:#555;margin-top:2px;">For the People by the People</div>
+            </div>
+            <div class="pdf-address">
+              24952 Corner Hulana &amp; Motopo Street<br>
+              Galeshewe, Kimberley, 8345<br>
+              info@hospitalekhaya.co.za<br>
+              053 0500 500
+            </div>
+          </div>
+          <hr class="pdf-divider" />
+          <div class="pdf-order-meta">
+            <div class="pdf-meta-item"><span class="pdf-meta-label">Order Type:</span> ${isPresale ? 'PRESALE — Beaconmed' : 'BUY-OUT SCRIPT'}</div>
+            <div class="pdf-meta-item"><span class="pdf-meta-label">Order ID:</span> ${orderId}</div>
+            <div class="pdf-meta-item"><span class="pdf-meta-label">Supplier:</span> ${orderDoc.supplierName}</div>
+            <div class="pdf-meta-item"><span class="pdf-meta-label">Date:</span> ${orderDate}</div>
+            <div class="pdf-meta-item"><span class="pdf-meta-label">Ward:</span> ${orderDoc.ward||'—'}</div>
+            <div class="pdf-meta-item"><span class="pdf-meta-label">Account:</span> ${isPresale ? '21810' : '—'}</div>
+          </div>
+          <table class="pdf-table">
+            <thead><tr>${isPresale ? colsPresale : colsBuyout}</tr></thead>
+            <tbody>${isPresale ? rowsPresale : rowsBuyout}</tbody>
+          </table>
+          <div class="pdf-totals">
+            <div class="pdf-total-row">Total Excl VAT: <strong>R${totalExcl.toFixed(2)}</strong>${tbc > 0 ? ` <span style="color:#7A5000">(${tbc} line${tbc>1?'s':''} TBC)</span>` : ''}</div>
+            <div class="pdf-total-row">VAT @ 15%: <strong>R${vat.toFixed(2)}</strong></div>
+            <div class="pdf-total-final">TOTAL INCL VAT: R${totalIncl.toFixed(2)}</div>
+          </div>
+          ${doctorSection}
+          <div class="pdf-footer">
+            Generated ${new Date().toLocaleString('en-ZA')} · HAE Pharmacy Module · ${orderDoc.status?.toUpperCase()}
+            ${tbc > 0 ? `<br>⚠ ${tbc} line${tbc>1?'s':''} with no confirmed price — TBC on presale/invoice.` : ''}
+          </div>
+        </div>`;
+    }
+
+    // ── Download PDF using browser print ─────────────────────────────
+    function downloadPDF(htmlContent, filename) {
+      const w = window.open('','_blank');
+      w.document.write(`<!DOCTYPE html><html><head>
+        <title>${filename}</title>
+        <style>
+          body { font-family: Arial, sans-serif; font-size: 11px; margin: 20px; }
+          table { width:100%; border-collapse:collapse; }
+          th { background:#1F3864; color:#fff; padding:5px 6px; text-align:left; }
+          td { padding:5px 6px; border-bottom:1px solid #EEE; }
+          tr:nth-child(even) td { background:#F7F9FC; }
+          @media print { body { margin: 10px; } }
+        </style>
+      </head><body>${htmlContent}<script>window.onload=()=>{window.print();}<\/script></body></html>`);
+      w.document.close();
+    }
+
+    // ── Button handlers ───────────────────────────────────────────────
+    document.getElementById('btn-orders-back')?.addEventListener('click', () => {
+      document.getElementById('orders-detail-view').classList.add('hidden');
+      document.getElementById('orders-main-view').classList.remove('hidden');
+      document.getElementById('order-lines-container').innerHTML = '';
+      document.getElementById('order-notes').value = '';
+      document.getElementById('ai-search-panel').style.display = 'none';
+      currentRequest = null;
+    });
+
+    document.getElementById('btn-save-draft')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-save-draft');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const result = await saveOrder('draft');
+      if (result) showToast('Draft saved successfully.');
+      btn.disabled = false; btn.textContent = 'Save Draft';
+    });
+
+    document.getElementById('btn-submit-approval')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-submit-approval');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      const result = await saveOrder('pending_approval');
+      if (result) {
+        showToast('Order submitted for COO approval.');
+        document.getElementById('btn-orders-back').click();
+      }
+      btn.disabled = false; btn.textContent = 'Submit for Approval';
+    });
+
+    document.getElementById('btn-generate-pdf')?.addEventListener('click', async () => {
+      const lines = collectOrderLines();
+      if (lines.length === 0) {
+        document.getElementById('order-builder-error').textContent = 'Add at least one item before previewing.';
+        document.getElementById('order-builder-error').classList.remove('hidden');
+        return;
+      }
+      const supplier   = suppliersCache.find(s => s.id === document.getElementById('order-supplier')?.value);
+      const doctor     = doctorsCache.find(d => d.id === document.getElementById('order-doctor')?.value);
+      const mockOrder  = {
+        orderType:    currentOrderType,
+        supplierName: supplier?.name || 'Unknown',
+        doctorName:   doctor?.name   || null,
+        hpcsaNo:      doctor?.hpcsaNo || null,
+        ward:         currentRequest?.ward || '',
+        status:       'draft',
+      };
+      const html = generateOrderPDF(mockOrder, lines, 'PREVIEW');
+      document.getElementById('pdf-preview-content').innerHTML = html;
+      document.getElementById('pdf-modal-title').textContent =
+        currentOrderType === 'presale' ? 'Presale Order Preview' : 'Buy-out Script Preview';
+      document.getElementById('pdf-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-download-pdf')?.addEventListener('click', () => {
+      const content  = document.getElementById('pdf-preview-content').innerHTML;
+      const filename = `HAE_${currentOrderType === 'presale' ? 'Order' : 'BuyOut'}_${new Date().toISOString().slice(0,10)}`;
+      downloadPDF(content, filename);
+    });
+
+    ['btn-close-pdf','btn-close-pdf-2'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', () => {
+        document.getElementById('pdf-modal').classList.add('hidden');
+      });
+    });
+
+    document.getElementById('btn-add-order-line')?.addEventListener('click', () => {
+      buildOrderLine('order-lines-container');
+    });
+
+    // ── Subscribe to orders ───────────────────────────────────────────
+    function subscribeOrders(statusFilter) {
+      let q;
+      if (statusFilter) {
+        q = query(collection(db,'pharmacy_orders'),
+          where('status','==',statusFilter), orderBy('createdAt','desc'));
+      } else {
+        q = query(collection(db,'pharmacy_orders'), orderBy('createdAt','desc'));
+      }
+      onSnapshot(q, snap => {
+        const el = document.getElementById('orders-list');
+        if (!el) return;
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (docs.length === 0) {
+          el.innerHTML = '<div class="list-empty">No orders yet.</div>';
+          return;
+        }
+        el.innerHTML = '';
+        docs.forEach(ord => {
+          const div = document.createElement('div');
+          div.className = 'order-list-item';
+          const date = ord.createdAt?.toDate
+            ? ord.createdAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})
+            : '—';
+          div.innerHTML = `
+            <div class="order-list-top">
+              <div>
+                <span class="order-type-badge ${ord.orderType}">${ord.orderType}</span>
+                <strong style="margin-left:8px;font-size:0.88rem;">${ord.supplierName||'—'}</strong>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="status-pill ${ord.status?.replace('_','-')}">${(ord.status||'').replace('_',' ')}</span>
+                <span class="request-date">${date}</span>
+              </div>
+            </div>
+            <div style="font-size:0.8rem;color:var(--grey-600);">
+              Ward: ${ord.ward||'—'} · R${(ord.totalEstIncl||0).toFixed(2)} incl
+            </div>
+          `;
+          el.appendChild(div);
+        });
+      });
+    }
+
+    // ── Subscribe to requests for orders page ─────────────────────────
+    function subscribeOrdersPageRequests(statusFilter) {
+      let q;
+      if (statusFilter) {
+        q = query(collection(db,'pharmacy_requests'),
+          where('status','==',statusFilter), orderBy('createdAt','desc'));
+      } else {
+        q = query(collection(db,'pharmacy_requests'), orderBy('createdAt','desc'));
+      }
+      onSnapshot(q, snap => {
+        const el = document.getElementById('orders-requests-list');
+        if (!el) return;
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (docs.length === 0) {
+          el.innerHTML = '<div class="list-empty">No pending requests.</div>';
+          return;
+        }
+        el.innerHTML = '';
+        docs.forEach(req => {
+          const div = document.createElement('div');
+          div.className = 'request-item';
+          div.style.cursor = 'pointer';
+          const date = req.createdAt?.toDate
+            ? req.createdAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})
+            : '—';
+          div.innerHTML = `
+            <div class="request-item-top">
+              <div class="request-ward">${req.ward} <span class="channel-badge ${req.channel}">${req.channel}</span></div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="status-pill ${req.status}">${req.status}</span>
+                <span class="request-date">${date}</span>
+              </div>
+            </div>
+            <div class="request-motivation">${req.motivation||'—'}</div>
+            <div class="request-items-preview">
+              ${(req.items||[]).map(i=>`<span class="item-chip ${i.inFormulary?'':'non-formulary'}">${!i.inFormulary?'⚠ ':''}${i.description} ×${i.qtyRequested}</span>`).join('')}
+            </div>
+          `;
+          div.addEventListener('click', () => openRequestDetail(req));
+          el.appendChild(div);
+        });
+      });
+    }
+
+    // ── Filter handlers ───────────────────────────────────────────────
+    document.getElementById('orders-req-filter')?.addEventListener('change', e => {
+      subscribeOrdersPageRequests(e.target.value);
+    });
+    document.getElementById('orders-status-filter')?.addEventListener('change', e => {
+      subscribeOrders(e.target.value);
+    });
+
+    // ── Init orders page ──────────────────────────────────────────────
+    async function initOrdersPage(user, role) {
+      await loadFormulary();
+      await loadSuppliersAndDoctors();
+      subscribeOrdersPageRequests('pending');
+      subscribeOrders('');
+    }
 
   </script>
 </body>
