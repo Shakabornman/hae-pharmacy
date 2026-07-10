@@ -454,6 +454,20 @@
       font-style: italic;
     }
 
+    /* Request action buttons */
+    .btn-req-action {
+      background: none;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 3px 5px;
+      border-radius: 4px;
+      transition: background 0.15s;
+      line-height: 1;
+    }
+    .btn-req-action:hover { background: var(--grey-100); }
+    .btn-req-delete:hover { background: #FFF0F0; }
+
     /* Page views inside app */
     .page-view { display: none; }
     .page-view.active { display: block; }
@@ -1987,20 +2001,20 @@
     function collectItems(containerId) {
       const rows  = document.querySelectorAll(`#${containerId} .item-row`);
       const items = [];
-      let valid   = true;
       rows.forEach(row => {
         const id   = row.dataset.itemId;
         const desc = document.getElementById(`item-desc-${id}`)?.value.trim();
-        const qty  = parseInt(document.getElementById(`item-qty-${id}`)?.value) || 0;
-        if (!desc) { valid = false; return; }
+        // Auto-remove blank rows silently
+        if (!desc) { row.remove(); return; }
+        const qty  = parseInt(document.getElementById(`item-qty-${id}`)?.value) || 1;
         items.push({
-          productId:   row.dataset.productId   || null,
-          description: desc,
-          qtyRequested:qty || 1,
-          inFormulary: row.dataset.inFormulary === 'true',
+          productId:    row.dataset.productId   || null,
+          description:  desc,
+          qtyRequested: qty,
+          inFormulary:  row.dataset.inFormulary === 'true',
         });
       });
-      return { items, valid: valid && items.length > 0 };
+      return { items, valid: items.length > 0 };
     }
 
     // ── Show toast ────────────────────────────────────────────────────
@@ -2021,6 +2035,123 @@
       });
     }
 
+    // ── Delete request ────────────────────────────────────────────────
+    async function deleteRequest(req) {
+      const hasOrder = req.orderId;
+      const msg = hasOrder
+        ? `This request has a linked order. Delete anyway?\n\nWard: ${req.ward}\nStatus: ${req.status}`
+        : `Delete this request?\n\nWard: ${req.ward}\nItems: ${(req.items||[]).length}\n\nThis cannot be undone.`;
+      if (!confirm(msg)) return;
+      try {
+        const { deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+        await deleteDoc(doc(db, 'pharmacy_requests', req.id));
+        showToast('Request deleted.');
+      } catch(e) {
+        alert('Failed to delete request: ' + e.message);
+      }
+    }
+
+    // ── Can delete check ──────────────────────────────────────────────
+    function canDelete(req) {
+      if (currentRole === 'executive') return true;
+      if (req.status === 'pending' && req.requestedByUid === currentUser?.uid) return true;
+      return false;
+    }
+
+    // ── Can edit check ────────────────────────────────────────────────
+    function canEdit(req) {
+      if (req.status !== 'pending') return false;
+      if (currentRole === 'executive' || currentRole === 'finance') return true;
+      if (req.requestedByUid === currentUser?.uid) return true;
+      return false;
+    }
+
+    // ── Edit request panel ────────────────────────────────────────────
+    function openEditPanel(req) {
+      // Build edit modal
+      const existing = document.getElementById('edit-request-modal');
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id        = 'edit-request-modal';
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="modal-card" style="max-width:620px;">
+          <div class="modal-header">
+            <span>Edit Request — ${req.ward}</span>
+            <button class="modal-close" id="btn-close-edit-modal">×</button>
+          </div>
+          <div style="padding:20px;overflow-y:auto;max-height:65vh;">
+            <div class="form-row">
+              <label class="form-label">Ward <span class="req">*</span></label>
+              <input type="text" id="edit-ward" class="form-input" value="${req.ward||''}" />
+            </div>
+            <div class="form-row">
+              <label class="form-label">Motivation <span class="req">*</span></label>
+              <textarea id="edit-motivation" class="form-input" rows="2">${req.motivation||''}</textarea>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Items</label>
+              <div id="edit-items-container"></div>
+              <button class="btn-add-item" id="btn-edit-add-item">+ Add Item</button>
+            </div>
+            <div id="edit-req-error" class="form-error hidden"></div>
+          </div>
+          <div class="form-actions" style="padding:0 20px 20px;">
+            <button class="btn-primary" id="btn-edit-save">Save Changes</button>
+            <button class="btn-secondary" id="btn-close-edit-modal-2">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      // Populate existing items
+      (req.items || []).forEach(item => {
+        buildItemRow('edit-items-container', {
+          description: item.description,
+          productId:   item.productId || '',
+          inFormulary: item.inFormulary,
+          qty:         item.qtyRequested,
+        });
+      });
+
+      // Add item button
+      document.getElementById('btn-edit-add-item')?.addEventListener('click', () => {
+        buildItemRow('edit-items-container');
+      });
+
+      // Close buttons
+      ['btn-close-edit-modal','btn-close-edit-modal-2'].forEach(id => {
+        document.getElementById(id)?.addEventListener('click', () => modal.remove());
+      });
+
+      // Save changes
+      document.getElementById('btn-edit-save')?.addEventListener('click', async () => {
+        const ward       = document.getElementById('edit-ward')?.value.trim();
+        const motivation = document.getElementById('edit-motivation')?.value.trim();
+        const { items, valid } = collectItems('edit-items-container');
+        const errEl = document.getElementById('edit-req-error');
+        if (!ward || !motivation || !valid) {
+          errEl.textContent = 'Please fill in ward, motivation and at least one item.';
+          errEl.classList.remove('hidden'); return;
+        }
+        errEl.classList.add('hidden');
+        const btn = document.getElementById('btn-edit-save');
+        btn.disabled = true; btn.textContent = 'Saving…';
+        try {
+          await updateDoc(doc(db, 'pharmacy_requests', req.id), {
+            ward, motivation, items, updatedAt: serverTimestamp()
+          });
+          showToast('Request updated.');
+          modal.remove();
+        } catch(e) {
+          errEl.textContent = 'Failed to save: ' + e.message;
+          errEl.classList.remove('hidden');
+        }
+        btn.disabled = false; btn.textContent = 'Save Changes';
+      });
+    }
+
     // ── Render request list ───────────────────────────────────────────
     function renderRequestList(containerId, docs) {
       const el = document.getElementById(containerId);
@@ -2034,7 +2165,6 @@
         const div = document.createElement('div');
         div.className = 'request-item';
 
-        // Handle serverTimestamp() which may be null on first snapshot
         let date = '—';
         if (req.createdAt) {
           try {
@@ -2043,25 +2173,47 @@
           } catch(e) { date = '—'; }
         }
 
-        const status  = req.status || 'pending';
-        const chBadge = `<span class="channel-badge ${req.channel || 'web'}">${req.channel || 'web'}</span>`;
-        const itemChips = (req.items || []).map(i =>
-          `<span class="item-chip ${i.inFormulary ? '' : 'non-formulary'}">
-            ${!i.inFormulary ? '⚠ ' : ''}${i.description} ×${i.qtyRequested}
+        const status    = req.status || 'pending';
+        const chBadge   = `<span class="channel-badge ${req.channel||'web'}">${req.channel||'web'}</span>`;
+        const itemChips = (req.items||[]).map(i =>
+          `<span class="item-chip ${i.inFormulary?'':'non-formulary'}">
+            ${!i.inFormulary?'⚠ ':''}${i.description} ×${i.qtyRequested}
            </span>`
         ).join('');
 
+        const showDelete = canDelete(req);
+        const showEdit   = canEdit(req);
+
         div.innerHTML = `
           <div class="request-item-top">
-            <div class="request-ward">${req.ward || '—'} ${chBadge}</div>
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div class="request-ward">${req.ward||'—'} ${chBadge}</div>
+            <div style="display:flex;align-items:center;gap:6px;">
               <span class="status-pill ${status}">${status}</span>
               <span class="request-date">${date}</span>
+              ${showEdit   ? `<button class="btn-req-action btn-req-edit"   data-id="${req.id}" title="Edit">✏️</button>` : ''}
+              ${showDelete ? `<button class="btn-req-action btn-req-delete" data-id="${req.id}" title="Delete">🗑</button>` : ''}
             </div>
           </div>
-          <div class="request-motivation">${req.motivation || '—'}</div>
+          <div class="request-motivation">${req.motivation||'—'}</div>
           <div class="request-items-preview">${itemChips}</div>
         `;
+
+        // Edit button
+        if (showEdit) {
+          div.querySelector('.btn-req-edit')?.addEventListener('click', e => {
+            e.stopPropagation();
+            openEditPanel(req);
+          });
+        }
+
+        // Delete button
+        if (showDelete) {
+          div.querySelector('.btn-req-delete')?.addEventListener('click', e => {
+            e.stopPropagation();
+            deleteRequest(req);
+          });
+        }
+
         el.appendChild(div);
       });
     }
@@ -2574,23 +2726,24 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       rows.forEach(row => {
         const id    = row.dataset.lineId;
         const desc  = document.getElementById(`ol-desc-input-${id}`)?.value.trim();
+        // Auto-remove blank rows silently
+        if (!desc) { row.remove(); return; }
         const qty   = parseFloat(document.getElementById(`ol-qty-${id}`)?.value) || 1;
         const price = parseFloat(document.getElementById(`ol-price-${id}`)?.value) || 0;
         const pack  = document.getElementById(`ol-pack-${id}`)?.value.trim() || '';
-        if (!desc) return;
         lines.push({
-          productId:   row.dataset.productId || null,
-          description: desc,
-          nappiCode:   row.dataset.nappi   || '',
-          tfmCode:     row.dataset.tfm     || '',
-          schedule:    row.dataset.schedule || '',
-          packSize:    pack,
-          qtyOrdered:  qty,
-          unitPriceExcl: price,
-          totalExcl:   Math.round(qty * price * 100) / 100,
-          qtyDelivered:  0,
+          productId:      row.dataset.productId || null,
+          description:    desc,
+          nappiCode:      row.dataset.nappi    || '',
+          tfmCode:        row.dataset.tfm      || '',
+          schedule:       row.dataset.schedule || '',
+          packSize:       pack,
+          qtyOrdered:     qty,
+          unitPriceExcl:  price,
+          totalExcl:      Math.round(qty * price * 100) / 100,
+          qtyDelivered:   0,
           qtyOutstanding: qty,
-          status:      'open',
+          status:         'open',
         });
       });
       return lines;
