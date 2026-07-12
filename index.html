@@ -1175,6 +1175,42 @@
       margin-bottom: 6px; background: var(--grey-100); border-radius: var(--radius);
     }
     .buyout-price-desc { font-weight: 600; font-size: 0.85rem; color: var(--navy); }
+    /* ── Invoice capture + reconciliation (Step 7) ─────────────────────── */
+    .status-pill.pending-reconciliation { background: #FFF3CD; color: #7A5000; }
+    .status-pill.reconciled             { background: #E8F5E9; color: var(--green); }
+    .channel-badge.shortfall { background: #FFF0F0; color: var(--red); }
+    .invoice-line-row {
+      display: grid;
+      grid-template-columns: 1.6fr 1.3fr 70px 90px 90px 90px 26px;
+      gap: 6px; align-items: center; padding: 8px; margin-bottom: 6px;
+      background: var(--grey-100); border-radius: var(--radius); font-size: 0.8rem;
+    }
+    .invoice-line-row input, .invoice-line-row select {
+      width: 100%; padding: 6px 8px; border: 1px solid var(--grey-300);
+      border-radius: 6px; font-size: 0.8rem;
+    }
+    .invoice-line-row .btn-remove-line {
+      background: none; border: none; color: var(--red); font-size: 1.1rem;
+      cursor: pointer; line-height: 1;
+    }
+    .invoice-line-head {
+      display: grid;
+      grid-template-columns: 1.6fr 1.3fr 70px 90px 90px 90px 26px;
+      gap: 6px; padding: 0 8px 4px; font-size: 0.7rem; font-weight: 700;
+      color: var(--grey-600); text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .variance-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 6px;
+      border-radius: 4px; text-align: center; white-space: nowrap;
+    }
+    .variance-badge.ok      { background: #E8F5E9; color: var(--green); }
+    .variance-badge.flagged { background: #FFF0F0; color: var(--red); }
+    .variance-badge.neutral { background: var(--grey-100); color: var(--grey-600); }
+    .short-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 6px;
+      border-radius: 4px; background: #FFF0F0; color: var(--red); white-space: nowrap;
+    }
+    .invoice-summary-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
     .nav-rejected-badge {
       margin-left: auto; background: var(--red); color: var(--white);
       font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 10px;
@@ -1779,21 +1815,97 @@
         </div>
 
         <div class="page-view" id="page-invoices">
-          <div class="page-header"><h1>Invoices</h1></div>
-          <div class="placeholder-card">
-            <div class="step-badge">Step 7</div>
-            <h2>Invoice Capture</h2>
-            <p>Invoice capture and matching will be available here once Step 7 is built and confirmed.</p>
+          <div class="page-header">
+            <h1>Invoices</h1>
+            <p>Capture supplier invoices against approved presale orders and submit for reconciliation.</p>
+          </div>
+          <div class="orders-panels">
+            <div class="orders-panel">
+              <div class="card">
+                <div class="card-title">Orders Awaiting Invoice</div>
+                <div id="invoices-awaiting-list">
+                  <div class="list-loading">Loading…</div>
+                </div>
+              </div>
+            </div>
+            <div class="orders-panel">
+              <div class="card">
+                <div class="card-title">Captured Invoices</div>
+                <div id="invoices-captured-list">
+                  <div class="list-loading">Loading…</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="page-view" id="page-reconcile">
-          <div class="page-header"><h1>Reconciliation</h1></div>
-          <div class="placeholder-card">
-            <div class="step-badge">Step 7</div>
-            <h2>Presale Reconciliation</h2>
-            <p>Short delivery detection and presale reconciliation will be available here once Step 7 is built and confirmed.</p>
+          <div class="page-header">
+            <h1>Reconciliation</h1>
+            <p>Review captured invoices against orders — check for short deliveries and price variances, then reconcile.</p>
           </div>
+
+          <!-- ── Reconciliation list view ─────────────────────────────────── -->
+          <div id="reconcile-list-view">
+            <div class="orders-panels">
+              <div class="orders-panel">
+                <div class="card">
+                  <div class="card-title-row">
+                    <div class="card-title">Pending Reconciliation</div>
+                    <span id="reconcile-pending-count" class="approval-count">0</span>
+                  </div>
+                  <div id="reconcile-pending-list">
+                    <div class="list-loading">Loading…</div>
+                  </div>
+                </div>
+              </div>
+              <div class="orders-panel">
+                <div class="card">
+                  <div class="card-title">Recently Reconciled</div>
+                  <div id="reconcile-actioned-list">
+                    <div class="list-loading">Loading…</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Reconciliation detail view ──────────────────────────────── -->
+          <div id="reconcile-detail-view" class="hidden">
+
+            <div class="detail-back">
+              <button class="btn-secondary" id="btn-reconcile-back">← Back to Reconciliation</button>
+              <span id="reconcile-detail-title" class="detail-title"></span>
+            </div>
+
+            <div class="card mb-20" id="reconcile-invoice-detail">
+              <!-- Populated by JS -->
+            </div>
+
+            <div class="card mb-20">
+              <div class="card-title">Line-by-Line Comparison</div>
+              <div id="reconcile-lines-table"></div>
+            </div>
+
+            <div class="card" id="reconcile-actions-card">
+              <div class="card-title">Reconciliation</div>
+              <div class="form-row">
+                <label class="form-label">Notes (optional)</label>
+                <textarea id="reconcile-notes" class="form-input" rows="3"
+                  placeholder="Add any notes for the record…"></textarea>
+              </div>
+              <div id="reconcile-action-error" class="form-error hidden"></div>
+              <div class="form-actions">
+                <button class="btn-primary" id="btn-reconcile-confirm">✓ Reconcile Invoice</button>
+              </div>
+            </div>
+
+            <div class="card hidden" id="reconcile-actioned-msg">
+              <div id="reconcile-actioned-content"></div>
+            </div>
+
+          </div>
+
         </div>
 
         <div class="page-view" id="page-formulary">
@@ -1889,7 +2001,7 @@
           if (n) n.classList.add('disabled');
         });
       } else if (role === 'finance') {
-        if (navApprovals) navApprovals.classList.add('disabled');
+        [navApprovals, navReconcile].forEach(n => { if (n) n.classList.add('disabled'); });
       }
       // executive sees everything — no changes needed
     }
@@ -1898,10 +2010,14 @@
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         showScreen('login');
-        // Reset Step 4 state on sign out
+        // Reset state on sign out
         currentUser = null;
         currentRole = null;
-        window._requestsInitDone = false;
+        window._requestsInitDone  = false;
+        window._ordersInitDone    = false;
+        window._approvalsInitDone = false;
+        window._invoicesInitDone  = false;
+        window._reconcileInitDone = false;
         return;
       }
 
@@ -2791,6 +2907,8 @@ If you cannot read an item clearly, include it with description marked as "[uncl
     window._requestsInitDone  = false;
     window._ordersInitDone    = false;
     window._approvalsInitDone = false;
+    window._invoicesInitDone  = false;
+    window._reconcileInitDone = false;
     function showPageExtended(name) {
       showPage(name);
       if (name === 'requests' && !window._requestsInitDone && currentUser && currentRole) {
@@ -2804,6 +2922,14 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       if (name === 'approval' && !window._approvalsInitDone && currentUser && currentRole) {
         window._approvalsInitDone = true;
         initApprovalsPage(currentUser, currentRole);
+      }
+      if (name === 'invoices' && !window._invoicesInitDone && currentUser && currentRole) {
+        window._invoicesInitDone = true;
+        initInvoicesPage(currentUser, currentRole);
+      }
+      if (name === 'reconcile' && !window._reconcileInitDone && currentUser && currentRole) {
+        window._reconcileInitDone = true;
+        initReconcilePage(currentUser, currentRole);
       }
     }
     // Re-bind nav items to extended showPage
@@ -3606,14 +3732,12 @@ Respond ONLY with a JSON array. Example:
             e.stopPropagation();
             const action = btn.dataset.action;
             const ordId  = btn.dataset.ordId;
-            console.log('Action clicked:', action, ordId);
             try {
               const ordDocRef  = doc(db, 'pharmacy_orders', ordId);
               const ordDocSnap = await getDoc(ordDocRef);
-              console.log('Order exists:', ordDocSnap.exists());
               if (!ordDocSnap.exists()) { console.error('Order not found'); return; }
               const order = { id: ordDocSnap.id, ...ordDocSnap.data() };
-              if (action === 'mark-sent')      { console.log('Calling openMarkSentModal'); openMarkSentModal(order); }
+              if (action === 'mark-sent')      { openMarkSentModal(order); }
               if (action === 'upload-presale') openPresaleUploadModal(order);
               if (action === 'buyout-prices')  openBuyoutPricesModal(order);
               if (action === 'view-rejected')
@@ -4088,6 +4212,484 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       });
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // STEP 7 — INVOICE CAPTURE (Finance)
+    // ════════════════════════════════════════════════════════════════
+
+    const VARIANCE_THRESHOLD_PCT = 5;
+
+    let currentInvoiceOrder     = null;  // order being invoiced
+    let invoiceLines            = [];    // working array: {description, nappiCode, qtyInvoiced, unitPriceExcl, matchedLineId}
+    let orderLinesForInvoice    = [];    // order lines available to match against
+    let currentReconcileInvoice = null;
+
+    // ── Orders awaiting invoice (approved presale orders without an invoice yet) ──
+    function subscribeOrdersAwaitingInvoice() {
+      const q = query(collection(db,'pharmacy_orders'),
+        where('status','==','approved'), where('orderType','==','presale'));
+      onSnapshot(q, snap => {
+        const docs = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(o => !o.invoiceId)
+          .sort((a,b) => (b.createdAt?.toMillis?.()||0) - (a.createdAt?.toMillis?.()||0));
+        renderOrdersAwaitingInvoice(docs);
+      });
+    }
+    function renderOrdersAwaitingInvoice(docs) {
+      const el = document.getElementById('invoices-awaiting-list');
+      if (!el) return;
+      if (!docs.length) { el.innerHTML = '<div class="list-empty">No approved orders awaiting invoice.</div>'; return; }
+      el.innerHTML = '';
+      docs.forEach(ord => {
+        const div = document.createElement('div');
+        div.className = 'order-list-item';
+        const date = ord.createdAt?.toDate
+          ? ord.createdAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})
+          : '—';
+        div.innerHTML = `
+          <div class="order-list-top">
+            <div>
+              <span class="order-type-badge presale">presale</span>
+              <strong style="margin-left:8px;font-size:0.88rem;">${ord.supplierName||'—'}</strong>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <span class="request-date">${date}</span>
+              <button class="btn-use-item" data-ord-id="${ord.id}">Capture Invoice</button>
+            </div>
+          </div>
+          <div style="font-size:0.8rem;color:var(--grey-600);">
+            Ward: ${ord.ward||'—'} · PRE ${ord.preNumber||'—'} · R${(ord.totalEstIncl||0).toFixed(2)} incl
+          </div>`;
+        div.querySelector('.btn-use-item').addEventListener('click', () => openCaptureInvoiceModal(ord));
+        el.appendChild(div);
+      });
+    }
+
+    // ── Captured invoices history ──────────────────────────────────────
+    function subscribeCapturedInvoices() {
+      onSnapshot(collection(db,'pharmacy_invoices'), snap => {
+        const docs = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a,b) => (b.capturedAt?.toMillis?.()||0) - (a.capturedAt?.toMillis?.()||0));
+        renderCapturedInvoices(docs);
+      });
+    }
+    function renderCapturedInvoices(docs) {
+      const el = document.getElementById('invoices-captured-list');
+      if (!el) return;
+      if (!docs.length) { el.innerHTML = '<div class="list-empty">No invoices captured yet.</div>'; return; }
+      el.innerHTML = '';
+      docs.forEach(inv => {
+        const div = document.createElement('div');
+        div.className = 'approval-order-card';
+        const sc = (inv.status||'').replace(/_/g,'-');
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div>
+              <strong style="font-size:0.88rem;">${inv.supplierName||'—'}</strong>
+              <span style="font-size:0.78rem;color:var(--grey-600);margin-left:6px;">${inv.invoiceNumber||'—'}</span>
+            </div>
+            <span class="status-pill ${sc}">${(inv.status||'').replace(/_/g,' ')}</span>
+          </div>
+          <div style="font-size:0.8rem;color:var(--grey-600);">
+            PRE ${inv.preNumber||'—'} · ${inv.invoiceDate||'—'} · R${(inv.totalIncl||0).toFixed(2)} incl
+          </div>
+          <div class="invoice-summary-tags">
+            ${inv.hasShortDelivery ? '<span class="short-badge">Short delivery</span>' : ''}
+            ${inv.hasVariance ? '<span class="variance-badge flagged">Price variance</span>' : ''}
+          </div>`;
+        el.appendChild(div);
+      });
+    }
+
+    async function initInvoicesPage(user, role) {
+      subscribeOrdersAwaitingInvoice();
+      subscribeCapturedInvoices();
+    }
+
+    // ── Capture Invoice modal ──────────────────────────────────────────
+    async function openCaptureInvoiceModal(order) {
+      currentInvoiceOrder = order;
+      invoiceLines = [];
+      document.getElementById('invoice-number').value = '';
+      document.getElementById('invoice-date').value   = '';
+      document.getElementById('invoice-file').value   = '';
+      document.getElementById('capture-invoice-error').classList.add('hidden');
+      document.getElementById('invoice-reading').classList.add('hidden');
+      document.getElementById('btn-read-invoice').classList.remove('hidden');
+      document.getElementById('capture-invoice-order-meta').innerHTML =
+        `<strong>${order.supplierName||'—'}</strong> · PRE ${order.preNumber||'—'} · Ward: ${order.ward||'—'} · R${(order.totalEstIncl||0).toFixed(2)} incl (ordered)`;
+      const linesSnap = await getDocs(
+        query(collection(db,'pharmacy_order_lines'), where('orderId','==', order.id)));
+      orderLinesForInvoice = linesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderInvoiceLineTable();
+      document.getElementById('modal-capture-invoice').classList.remove('hidden');
+    }
+    document.getElementById('btn-close-capture-invoice')?.addEventListener('click', () =>
+      document.getElementById('modal-capture-invoice').classList.add('hidden'));
+    document.getElementById('btn-cancel-capture-invoice')?.addEventListener('click', () =>
+      document.getElementById('modal-capture-invoice').classList.add('hidden'));
+
+    document.getElementById('btn-read-invoice')?.addEventListener('click', async () => {
+      const file  = document.getElementById('invoice-file').files[0];
+      const errEl = document.getElementById('capture-invoice-error');
+      if (!file) {
+        errEl.textContent = 'Please select a PDF or image file to read.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+      document.getElementById('btn-read-invoice').classList.add('hidden');
+      document.getElementById('invoice-reading').classList.remove('hidden');
+      try {
+        const extracted = await readInvoiceWithAI(file);
+        extracted.forEach(l => addInvoiceLine(l));
+      } catch(e) {
+        errEl.textContent = 'Failed to read invoice: ' + e.message;
+        errEl.classList.remove('hidden');
+      }
+      document.getElementById('btn-read-invoice').classList.remove('hidden');
+      document.getElementById('invoice-reading').classList.add('hidden');
+    });
+
+    async function readInvoiceWithAI(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64 = e.target.result.split(',')[1];
+          const mime   = file.type || 'application/pdf';
+          try {
+            const resp = await fetch(PROXY_URL, {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001', max_tokens: 2048,
+                messages:[{ role:'user', content:[
+                  { type:'image', source:{ type:'base64', media_type:mime, data:base64 }},
+                  { type:'text', text:`This is a supplier invoice (e.g. Beaconmed/Transpharm final invoice).
+Extract every line item delivered. For each return:
+- description, nappiCode (if visible), qty (delivered/invoiced), unitPriceExcl
+Respond ONLY with a JSON array, no markdown.
+Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10,"unitPriceExcl":18.97}]`}
+                ]}]
+              })
+            });
+            const data = await resp.json();
+            const text = data.content?.[0]?.text || '[]';
+            resolve(JSON.parse(text.replace(/```json|```/g,'').trim()));
+          } catch(err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('btn-add-invoice-line')?.addEventListener('click', () => {
+      addInvoiceLine({ description:'', nappiCode:'', qty:1, unitPriceExcl:0 });
+    });
+
+    function findBestOrderLineMatch(pl) {
+      let matched = null;
+      if (pl.nappiCode) matched = orderLinesForInvoice.find(ol => ol.nappiCode && ol.nappiCode === pl.nappiCode);
+      if (!matched && pl.description) {
+        const pDesc = pl.description.toLowerCase();
+        matched = orderLinesForInvoice.find(ol => {
+          const oDesc = (ol.description||'').toLowerCase();
+          return oDesc && pDesc && (oDesc.includes(pDesc.split(' ')[0]) || pDesc.includes(oDesc.split(' ')[0]));
+        });
+      }
+      return matched || null;
+    }
+
+    function addInvoiceLine(pl) {
+      const matched = findBestOrderLineMatch(pl);
+      invoiceLines.push({
+        description:    pl.description || '',
+        nappiCode:      pl.nappiCode || '',
+        qtyInvoiced:    pl.qty || 1,
+        unitPriceExcl:  pl.unitPriceExcl || 0,
+        matchedLineId:  matched?.id || '',
+      });
+      renderInvoiceLineTable();
+    }
+
+    function renderInvoiceLineTable() {
+      const container = document.getElementById('invoice-line-table');
+      container.innerHTML = '';
+      invoiceLines.forEach((line, idx) => {
+        const matchedOl = orderLinesForInvoice.find(ol => ol.id === line.matchedLineId);
+        const orderOpts = orderLinesForInvoice.map(ol =>
+          `<option value="${ol.id}" ${line.matchedLineId === ol.id ? 'selected' : ''}>${(ol.description||'').slice(0,30)||'—'}</option>`
+        ).join('');
+        const row = document.createElement('div');
+        row.className = 'invoice-line-row';
+        row.dataset.idx = idx;
+        row.innerHTML = `
+          <input type="text" class="inv-desc" value="${line.description}" placeholder="Description" />
+          <select class="inv-match"><option value="">No match — no order line</option>${orderOpts}</select>
+          <input type="text" class="inv-nappi" value="${line.nappiCode}" placeholder="NAPPI" />
+          <div style="text-align:center;font-weight:600;color:var(--grey-600);">${matchedOl ? matchedOl.qtyOrdered : '—'}</div>
+          <input type="number" class="inv-qty" value="${line.qtyInvoiced}" min="0" step="1" />
+          <input type="number" class="inv-price" value="${line.unitPriceExcl}" min="0" step="0.01" />
+          <button class="btn-remove-line" title="Remove line">×</button>`;
+        row.querySelector('.inv-desc').addEventListener('input', e => { line.description = e.target.value; });
+        row.querySelector('.inv-nappi').addEventListener('input', e => { line.nappiCode = e.target.value; });
+        row.querySelector('.inv-qty').addEventListener('input', e => { line.qtyInvoiced = parseFloat(e.target.value)||0; });
+        row.querySelector('.inv-price').addEventListener('input', e => { line.unitPriceExcl = parseFloat(e.target.value)||0; });
+        row.querySelector('.inv-match').addEventListener('change', e => {
+          line.matchedLineId = e.target.value;
+          renderInvoiceLineTable();
+        });
+        row.querySelector('.btn-remove-line').addEventListener('click', () => {
+          invoiceLines.splice(idx, 1);
+          renderInvoiceLineTable();
+        });
+        container.appendChild(row);
+      });
+    }
+
+    document.getElementById('btn-confirm-capture-invoice')?.addEventListener('click', async () => {
+      const btn   = document.getElementById('btn-confirm-capture-invoice');
+      const errEl = document.getElementById('capture-invoice-error');
+      const invoiceNumber = document.getElementById('invoice-number').value.trim();
+      const invoiceDate   = document.getElementById('invoice-date').value;
+      if (!invoiceNumber || !invoiceDate) {
+        errEl.textContent = 'Please enter the invoice number and date.';
+        errEl.classList.remove('hidden'); return;
+      }
+      if (!invoiceLines.length || invoiceLines.every(l => !l.description)) {
+        errEl.textContent = 'Please read an invoice with AI or add at least one line manually.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        let totalExcl = 0, hasVariance = false, hasShortDelivery = false;
+        const computedLines = invoiceLines.filter(l => l.description).map(l => {
+          const matchedOl    = orderLinesForInvoice.find(ol => ol.id === l.matchedLineId);
+          const qtyOrdered   = matchedOl ? (matchedOl.qtyOrdered||0) : 0;
+          const qtyShort     = matchedOl ? Math.max(qtyOrdered - (l.qtyInvoiced||0), 0) : 0;
+          const priceOrdered = matchedOl ? (matchedOl.unitPriceExcl||0) : 0;
+          const variancePct  = (matchedOl && priceOrdered > 0)
+            ? ((l.unitPriceExcl - priceOrdered) / priceOrdered) * 100 : 0;
+          const varianceFlag = !!(matchedOl && priceOrdered > 0 && Math.abs(variancePct) > VARIANCE_THRESHOLD_PCT);
+          if (qtyShort > 0) hasShortDelivery = true;
+          if (varianceFlag) hasVariance = true;
+          const lineTotalExcl = (l.unitPriceExcl||0) * (l.qtyInvoiced||0);
+          totalExcl += lineTotalExcl;
+          return {
+            orderLineId: matchedOl?.id || null,
+            description: l.description, nappiCode: l.nappiCode || null,
+            qtyOrdered, qtyInvoiced: l.qtyInvoiced||0, qtyShort,
+            unitPriceOrdered: priceOrdered, unitPriceInvoiced: l.unitPriceExcl||0,
+            variancePct: Math.round(variancePct*100)/100, varianceFlag,
+            lineTotalExcl: Math.round(lineTotalExcl*100)/100,
+          };
+        });
+        const invoiceRef = await addDoc(collection(db,'pharmacy_invoices'), {
+          orderId: currentInvoiceOrder.id,
+          preNumber: currentInvoiceOrder.preNumber || null,
+          supplierName: currentInvoiceOrder.supplierName || null,
+          ward: currentInvoiceOrder.ward || null,
+          invoiceNumber, invoiceDate,
+          status: 'pending_reconciliation',
+          totalExcl: Math.round(totalExcl*100)/100,
+          totalIncl: Math.round(totalExcl*1.15*100)/100,
+          hasVariance, hasShortDelivery,
+          capturedBy: currentUser.uid,
+          capturedByName: currentUser.displayName || currentUser.email,
+          capturedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        });
+        for (const cl of computedLines) {
+          await addDoc(collection(db,'pharmacy_invoice_lines'), {
+            invoiceId: invoiceRef.id, orderId: currentInvoiceOrder.id, ...cl,
+            createdAt: serverTimestamp(),
+          });
+        }
+        await updateDoc(doc(db,'pharmacy_orders', currentInvoiceOrder.id), {
+          invoiceId: invoiceRef.id, updatedAt: serverTimestamp(),
+        });
+        document.getElementById('modal-capture-invoice').classList.add('hidden');
+        showToast('Invoice captured — submitted for reconciliation.');
+      } catch(e) {
+        errEl.textContent = 'Failed: ' + e.message; errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Save Invoice';
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // STEP 7 — RECONCILIATION (Executive)
+    // ════════════════════════════════════════════════════════════════
+
+    function renderReconcileList(containerId, docs, isPending) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      if (!docs.length) {
+        el.innerHTML = `<div class="list-empty">${isPending?'No invoices awaiting reconciliation.':'No recently reconciled invoices.'}</div>`;
+        return;
+      }
+      el.innerHTML = '';
+      docs.forEach(inv => {
+        const div = document.createElement('div');
+        div.className = 'approval-order-card';
+        const sc = (inv.status||'').replace(/_/g,'-');
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div>
+              <strong style="font-size:0.88rem;">${inv.supplierName||'—'}</strong>
+              <span style="font-size:0.78rem;color:var(--grey-600);margin-left:6px;">${inv.invoiceNumber||'—'}</span>
+            </div>
+            <span class="status-pill ${sc}">${(inv.status||'').replace(/_/g,' ')}</span>
+          </div>
+          <div style="font-size:0.8rem;color:var(--grey-600);">
+            PRE ${inv.preNumber||'—'} · Ward: ${inv.ward||'—'} · ${inv.invoiceDate||'—'} · R${(inv.totalIncl||0).toFixed(2)} incl
+          </div>
+          <div class="invoice-summary-tags">
+            ${inv.hasShortDelivery ? '<span class="short-badge">Short delivery</span>' : ''}
+            ${inv.hasVariance ? '<span class="variance-badge flagged">Price variance</span>' : ''}
+          </div>`;
+        div.addEventListener('click', () => openReconcileDetail(inv));
+        el.appendChild(div);
+      });
+    }
+
+    function subscribeReconciliation() {
+      onSnapshot(collection(db,'pharmacy_invoices'), snap => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const pending = all.filter(i => i.status === 'pending_reconciliation')
+          .sort((a,b) => (b.capturedAt?.toMillis?.()||0) - (a.capturedAt?.toMillis?.()||0));
+        const actioned = all.filter(i => i.status === 'reconciled')
+          .sort((a,b) => (b.reconciledAt?.toMillis?.()||0) - (a.reconciledAt?.toMillis?.()||0));
+        const count = pending.length;
+        const countEl = document.getElementById('reconcile-pending-count');
+        if (countEl) { countEl.textContent = count; countEl.className = `approval-count${count===0?' zero':''}`; }
+        const navR = document.querySelector('[data-page="reconcile"]');
+        let badge  = navR?.querySelector('.nav-badge');
+        if (count > 0) {
+          if (!badge) { badge = document.createElement('span'); badge.className = 'nav-badge'; navR?.appendChild(badge); }
+          badge.textContent = count;
+        } else if (badge) { badge.remove(); }
+        renderReconcileList('reconcile-pending-list', pending, true);
+        renderReconcileList('reconcile-actioned-list', actioned, false);
+      });
+    }
+
+    async function initReconcilePage(user, role) {
+      subscribeReconciliation();
+    }
+
+    async function openReconcileDetail(inv) {
+      currentReconcileInvoice = inv;
+      document.getElementById('reconcile-list-view').classList.add('hidden');
+      document.getElementById('reconcile-detail-view').classList.remove('hidden');
+      document.getElementById('reconcile-detail-title').textContent =
+        `${inv.supplierName||'—'} — ${inv.invoiceNumber||'—'}`;
+      document.getElementById('reconcile-notes').value = inv.reconciliationNotes || '';
+      document.getElementById('reconcile-action-error').classList.add('hidden');
+      const metaEl = document.getElementById('reconcile-invoice-detail');
+      metaEl.innerHTML = `
+        <div class="card-title">Invoice Summary</div>
+        <div class="approval-detail-meta">
+          <div><div class="approval-meta-label">Supplier</div>
+            <div class="approval-meta-value">${inv.supplierName||'—'}</div></div>
+          <div><div class="approval-meta-label">Ward</div>
+            <div class="approval-meta-value">${inv.ward||'—'}</div></div>
+          <div><div class="approval-meta-label">PRE Number</div>
+            <div class="approval-meta-value">${inv.preNumber||'—'}</div></div>
+          <div><div class="approval-meta-label">Invoice Number</div>
+            <div class="approval-meta-value">${inv.invoiceNumber||'—'}</div></div>
+          <div><div class="approval-meta-label">Invoice Date</div>
+            <div class="approval-meta-value">${inv.invoiceDate||'—'}</div></div>
+          <div><div class="approval-meta-label">Total Incl</div>
+            <div class="approval-meta-value" style="color:var(--navy);font-size:1.05rem;">R${(inv.totalIncl||0).toFixed(2)}</div></div>
+          <div><div class="approval-meta-label">Status</div>
+            <div class="approval-meta-value">
+              <span class="status-pill ${(inv.status||'').replace(/_/g,'-')}">${(inv.status||'').replace(/_/g,' ')}</span>
+            </div></div>
+        </div>`;
+      const linesSnap = await getDocs(
+        query(collection(db,'pharmacy_invoice_lines'), where('invoiceId','==', inv.id)));
+      const lines = linesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const linesEl = document.getElementById('reconcile-lines-table');
+      if (!lines.length) {
+        linesEl.innerHTML = '<div class="list-empty">No lines found.</div>';
+      } else {
+        linesEl.innerHTML = `<table class="approval-lines-table"><thead><tr>
+          <th>#</th><th>Description</th><th>Qty Ordered</th><th>Qty Invoiced</th><th>Short</th>
+          <th>Price Ordered</th><th>Price Invoiced</th><th>Variance</th>
+        </tr></thead><tbody>${lines.map((l,i)=>`<tr>
+          <td>${i+1}</td><td><strong>${l.description}</strong></td>
+          <td>${l.qtyOrdered||'—'}</td><td>${l.qtyInvoiced||0}</td>
+          <td>${l.qtyShort > 0 ? `<span class="short-badge">${l.qtyShort} short</span>` : '—'}</td>
+          <td>${l.unitPriceOrdered ? 'R'+l.unitPriceOrdered.toFixed(2) : '—'}</td>
+          <td>R${(l.unitPriceInvoiced||0).toFixed(2)}</td>
+          <td>${l.orderLineId
+              ? `<span class="variance-badge ${l.varianceFlag?'flagged':'ok'}">${l.variancePct>0?'+':''}${l.variancePct}%</span>`
+              : '<span class="variance-badge neutral">No match</span>'}</td>
+        </tr>`).join('')}</tbody></table>`;
+      }
+      const isPending = inv.status === 'pending_reconciliation';
+      document.getElementById('reconcile-actions-card').classList.toggle('hidden', !isPending);
+      const actMsg  = document.getElementById('reconcile-actioned-msg');
+      const actCont = document.getElementById('reconcile-actioned-content');
+      if (!isPending) {
+        actMsg.classList.remove('hidden');
+        const rDate = inv.reconciledAt?.toDate?.()?.toLocaleDateString('en-ZA') || '—';
+        actCont.innerHTML = `<div style="color:var(--green);font-weight:700;">✓ Reconciled ${rDate}</div>
+          ${inv.reconciliationNotes ? `<div style="font-size:0.85rem;margin-top:4px;">${inv.reconciliationNotes}</div>` : ''}
+          ${inv.followUpRequestId ? `<div style="font-size:0.82rem;margin-top:6px;color:var(--red);">A follow-up stock request was raised for the short-delivered items.</div>` : ''}`;
+      } else { actMsg.classList.add('hidden'); }
+    }
+    document.getElementById('btn-reconcile-back')?.addEventListener('click', () => {
+      document.getElementById('reconcile-detail-view').classList.add('hidden');
+      document.getElementById('reconcile-list-view').classList.remove('hidden');
+      currentReconcileInvoice = null;
+    });
+
+    document.getElementById('btn-reconcile-confirm')?.addEventListener('click', async () => {
+      const btn   = document.getElementById('btn-reconcile-confirm');
+      const errEl = document.getElementById('reconcile-action-error');
+      const notes = document.getElementById('reconcile-notes').value.trim();
+      btn.disabled = true; btn.textContent = 'Reconciling…';
+      try {
+        const linesSnap = await getDocs(
+          query(collection(db,'pharmacy_invoice_lines'), where('invoiceId','==', currentReconcileInvoice.id)));
+        const lines = linesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const shortLines = lines.filter(l => l.qtyShort > 0);
+        let followUpRequestId = null;
+        if (shortLines.length > 0) {
+          const items = shortLines.map(l => ({
+            productId: null, description: l.description,
+            qtyRequested: l.qtyShort, inFormulary: false,
+          }));
+          const reqRef = await addDoc(collection(db,'pharmacy_requests'), {
+            channel: 'shortfall',
+            requestedByUid: currentUser.uid,
+            requestedByName: currentUser.displayName || currentUser.email,
+            ward: currentReconcileInvoice.ward || '—',
+            motivation: `Short-delivery follow-up — Invoice ${currentReconcileInvoice.invoiceNumber||'—'} against PRE ${currentReconcileInvoice.preNumber||'—'} (Order ${currentReconcileInvoice.orderId}).`,
+            status: 'pending', items, whatsappNote: '',
+            createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          });
+          followUpRequestId = reqRef.id;
+        }
+        await updateDoc(doc(db,'pharmacy_invoices', currentReconcileInvoice.id), {
+          status: 'reconciled',
+          reconciledBy: currentUser.uid,
+          reconciledByName: currentUser.displayName || currentUser.email,
+          reconciledAt: serverTimestamp(),
+          reconciliationNotes: notes || null,
+          followUpRequestId,
+          updatedAt: serverTimestamp(),
+        });
+        showToast(followUpRequestId
+          ? 'Invoice reconciled — a follow-up stock request was raised for the shortfall.'
+          : 'Invoice reconciled.');
+        document.getElementById('btn-reconcile-back').click();
+      } catch(e) {
+        errEl.textContent = 'Failed: ' + e.message; errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = '✓ Reconcile Invoice';
+    });
+
   </script>
   <!-- ── GLOBAL MODALS — outside all page-views so they overlay any screen ── -->
 
@@ -4195,6 +4797,57 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       <div class="form-actions" style="padding:0 20px 20px;">
         <button class="btn-primary" id="btn-buyout-submit-approval">Submit for Approval</button>
         <button class="btn-secondary" id="btn-cancel-buyout-prices">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Capture Invoice modal -->
+  <div id="modal-capture-invoice" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:960px;">
+      <div class="modal-header">
+        <span>Capture Invoice</span>
+        <button class="modal-close" id="btn-close-capture-invoice">×</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto;max-height:78vh;">
+        <div id="capture-invoice-order-meta" style="font-size:0.85rem;color:var(--grey-600);margin-bottom:14px;"></div>
+
+        <div class="form-row">
+          <label class="form-label">Invoice Number <span class="req">*</span></label>
+          <input type="text" id="invoice-number" class="form-input" placeholder="e.g. INV35366240" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Invoice Date <span class="req">*</span></label>
+          <input type="date" id="invoice-date" class="form-input" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Invoice PDF (optional)
+            <span class="form-hint">Upload to auto-extract lines with AI, or add lines manually below</span>
+          </label>
+          <input type="file" id="invoice-file" class="form-input" accept="application/pdf,image/*" />
+        </div>
+        <div id="capture-invoice-error" class="form-error hidden"></div>
+        <div class="form-actions">
+          <button class="btn-primary" id="btn-read-invoice">Read with AI</button>
+          <button class="btn-secondary" id="btn-add-invoice-line">+ Add Line Manually</button>
+        </div>
+        <div id="invoice-reading" class="hidden">
+          <div class="reading-indicator">
+            <div class="spinner-sm"></div>
+            <span>Reading invoice — please wait…</span>
+          </div>
+        </div>
+
+        <div id="invoice-lines-section" style="margin-top:16px;">
+          <div class="invoice-line-head">
+            <div>Description</div><div>Match to Order Line</div><div>NAPPI</div>
+            <div>Qty Ordered</div><div>Qty Invoiced</div><div>Price Excl</div><div></div>
+          </div>
+          <div id="invoice-line-table"></div>
+        </div>
+      </div>
+      <div class="form-actions" style="padding:0 20px 20px;">
+        <button class="btn-primary" id="btn-confirm-capture-invoice">Save Invoice</button>
+        <button class="btn-secondary" id="btn-cancel-capture-invoice">Cancel</button>
       </div>
     </div>
   </div>
