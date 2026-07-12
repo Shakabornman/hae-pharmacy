@@ -1099,6 +1099,86 @@
       border-top: 1px solid #CCC;
       padding-top: 6px;
     }
+
+    /* ── Step 6 — Approvals ─────────────────────────────────────────── */
+    .approval-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      background: var(--red);
+      color: var(--white);
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 12px;
+      padding: 0 6px;
+    }
+    .approval-count.zero { background: var(--grey-300); }
+    .approval-order-card {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--grey-100);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .approval-order-card:last-child { border-bottom: none; }
+    .approval-order-card:hover { background: var(--grey-100); }
+    .approval-detail-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 16px 0;
+    }
+    .approval-meta-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--grey-600);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .approval-meta-value { font-size: 0.9rem; color: var(--text); font-weight: 600; }
+    .approval-lines-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .approval-lines-table th {
+      background: var(--navy); color: var(--white);
+      padding: 7px 10px; text-align: left; font-size: 0.8rem;
+    }
+    .approval-lines-table td {
+      padding: 8px 10px; border-bottom: 1px solid var(--grey-100); vertical-align: top;
+    }
+    .approval-lines-table tr:nth-child(even) td { background: var(--grey-100); }
+    .btn-reject {
+      padding: 9px 18px; background: transparent; color: var(--red);
+      border: 1.5px solid var(--red); border-radius: var(--radius);
+      font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-reject:hover { background: var(--red); color: var(--white); }
+    .presale-match-row {
+      display: grid;
+      grid-template-columns: 1fr 28px 1fr 80px 90px;
+      gap: 8px; align-items: center; padding: 10px; margin-bottom: 6px;
+      background: var(--grey-100); border-radius: var(--radius); font-size: 0.82rem;
+    }
+    .presale-match-arrow { text-align: center; color: var(--mid-blue); font-size: 1rem; }
+    .presale-match-desc  { font-weight: 600; color: var(--navy); }
+    .presale-match-price { font-weight: 700; color: var(--teal); text-align: right; }
+    .presale-match-status {
+      font-size: 0.72rem; font-weight: 700; padding: 2px 6px;
+      border-radius: 4px; text-align: center;
+    }
+    .presale-match-status.auto   { background: #E8F5E9; color: var(--green); }
+    .presale-match-status.manual { background: #FFF3CD; color: #7A5000; }
+    .presale-match-status.none   { background: #FFF0F0; color: var(--red); }
+    .buyout-price-row {
+      display: grid; grid-template-columns: 1fr 100px 120px;
+      gap: 8px; align-items: center; padding: 8px 10px;
+      margin-bottom: 6px; background: var(--grey-100); border-radius: var(--radius);
+    }
+    .buyout-price-desc { font-weight: 600; font-size: 0.85rem; color: var(--navy); }
+    .nav-rejected-badge {
+      margin-left: auto; background: var(--red); color: var(--white);
+      font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 10px;
+    }
   </style>
 </head>
 <body>
@@ -1494,9 +1574,11 @@
                     <select id="orders-status-filter" class="filter-select">
                       <option value="">All</option>
                       <option value="draft">Draft</option>
+                      <option value="sent">Sent</option>
+                      <option value="presale_received">Presale Received</option>
                       <option value="pending_approval">Pending Approval</option>
                       <option value="approved">Approved</option>
-                      <option value="sent">Sent</option>
+                      <option value="rejected">Rejected</option>
                     </select>
                   </div>
                   <div id="orders-list">
@@ -1617,13 +1699,199 @@
 
         </div>
 
+        <!-- ── STEP 6: APPROVALS ────────────────────────────────────────── -->
         <div class="page-view" id="page-approval">
-          <div class="page-header"><h1>Approvals</h1></div>
-          <div class="placeholder-card">
-            <div class="step-badge">Step 6</div>
-            <h2>Approval Workflow</h2>
-            <p>COO order approval will be available here once Step 6 is built and confirmed.</p>
+          <div class="page-header">
+            <h1>Approvals</h1>
+            <p>Review and approve or reject orders submitted by Finance.</p>
           </div>
+
+          <!-- ── Approvals list view ─────────────────────────────────────── -->
+          <div id="approval-list-view">
+            <div class="orders-panels">
+
+              <!-- Pending approvals -->
+              <div class="orders-panel">
+                <div class="card">
+                  <div class="card-title-row">
+                    <div class="card-title">Pending Approval</div>
+                    <span id="approval-pending-count" class="approval-count">0</span>
+                  </div>
+                  <div id="approval-pending-list">
+                    <div class="list-loading">Loading…</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recently actioned -->
+              <div class="orders-panel">
+                <div class="card">
+                  <div class="card-title">Recently Actioned</div>
+                  <div id="approval-actioned-list">
+                    <div class="list-loading">Loading…</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Order approval detail view ──────────────────────────────── -->
+          <div id="approval-detail-view" class="hidden">
+
+            <div class="detail-back">
+              <button class="btn-secondary" id="btn-approval-back">← Back to Approvals</button>
+              <span id="approval-detail-title" class="detail-title"></span>
+            </div>
+
+            <div class="card mb-20" id="approval-order-detail">
+              <!-- Populated by JS -->
+            </div>
+
+            <!-- Order lines table -->
+            <div class="card mb-20">
+              <div class="card-title">Order Lines</div>
+              <div id="approval-lines-table"></div>
+            </div>
+
+            <!-- Approval actions — only for pending_approval orders -->
+            <div class="card" id="approval-actions-card">
+              <div class="card-title">Decision</div>
+              <div class="form-row">
+                <label class="form-label">Comment (optional for approval, mandatory for rejection)</label>
+                <textarea id="approval-comment" class="form-input" rows="3"
+                  placeholder="Add a comment or reason…"></textarea>
+              </div>
+              <div id="approval-action-error" class="form-error hidden"></div>
+              <div class="form-actions">
+                <button class="btn-primary" id="btn-approve-order">✓ Approve Order</button>
+                <button class="btn-reject" id="btn-reject-order">✗ Reject Order</button>
+              </div>
+            </div>
+
+            <!-- Already actioned message -->
+            <div class="card hidden" id="approval-actioned-msg">
+              <div id="approval-actioned-content"></div>
+            </div>
+
+          </div>
+
+          <!-- ── Order action modals (mark sent, presale upload, buy-out prices) ── -->
+
+          <!-- Mark as Sent modal -->
+          <div id="modal-mark-sent" class="modal-overlay hidden">
+            <div class="modal-card" style="max-width:480px;">
+              <div class="modal-header">
+                <span>Mark Order as Sent</span>
+                <button class="modal-close" id="btn-close-mark-sent">×</button>
+              </div>
+              <div style="padding:20px;">
+                <p style="font-size:0.9rem;color:var(--grey-600);margin-bottom:16px;">
+                  Confirm you have sent this order to the supplier externally (email, phone, or portal).
+                </p>
+                <div class="form-row">
+                  <label class="form-label">Sent to</label>
+                  <input type="text" id="sent-to-name" class="form-input" placeholder="Contact name at supplier" />
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Method</label>
+                  <select id="sent-method" class="form-input">
+                    <option value="email">Email</option>
+                    <option value="phone">Phone</option>
+                    <option value="portal">Supplier portal</option>
+                    <option value="in_person">In person</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions" style="padding:0 20px 20px;">
+                <button class="btn-primary" id="btn-confirm-mark-sent">Confirm Sent</button>
+                <button class="btn-secondary" id="btn-cancel-mark-sent">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Presale Upload modal -->
+          <div id="modal-presale-upload" class="modal-overlay hidden">
+            <div class="modal-card" style="max-width:900px;">
+              <div class="modal-header">
+                <span>Upload Beaconmed Presale</span>
+                <button class="modal-close" id="btn-close-presale-upload">×</button>
+              </div>
+              <div style="padding:20px;overflow-y:auto;max-height:75vh;">
+
+                <!-- Step 1: Upload -->
+                <div id="presale-upload-step1">
+                  <div class="form-row">
+                    <label class="form-label">PRE Number <span class="req">*</span></label>
+                    <input type="text" id="presale-pre-number" class="form-input"
+                      placeholder="e.g. PRE1323686" />
+                  </div>
+                  <div class="form-row">
+                    <label class="form-label">Presale PDF <span class="req">*</span>
+                      <span class="form-hint">Upload the Beaconmed presale document</span>
+                    </label>
+                    <input type="file" id="presale-file" class="form-input" accept="application/pdf,image/*" />
+                  </div>
+                  <div id="presale-upload-error" class="form-error hidden"></div>
+                  <div class="form-actions">
+                    <button class="btn-primary" id="btn-read-presale">Read Presale with AI</button>
+                  </div>
+                  <div id="presale-reading" class="hidden">
+                    <div class="reading-indicator">
+                      <div class="spinner-sm"></div>
+                      <span>Reading presale — please wait…</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Step 2: Match lines -->
+                <div id="presale-upload-step2" class="hidden">
+                  <div class="review-banner">
+                    <strong>Presale extracted — review each line and confirm the match to your order.</strong>
+                    Unmatched order lines will revert to pending on the original request.
+                  </div>
+                  <div id="presale-match-table"></div>
+                  <div id="presale-unmatched-section" class="hidden">
+                    <div style="margin-top:14px;padding:12px;background:#FFF0F0;border-radius:8px;border:1px solid #FFCCCC;">
+                      <strong style="color:var(--red);">⚠ Unmatched order lines</strong>
+                      <p style="font-size:0.82rem;color:var(--grey-600);margin-top:4px;">
+                        These items were not on the presale. They will revert to pending on the original request.
+                      </p>
+                      <div id="presale-unmatched-list"></div>
+                    </div>
+                  </div>
+                  <div id="presale-match-error" class="form-error hidden"></div>
+                  <div class="form-actions">
+                    <button class="btn-secondary" id="btn-presale-back">← Re-upload</button>
+                    <button class="btn-primary" id="btn-presale-confirm">Confirm & Submit for Approval</button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Buy-out Price Entry modal -->
+          <div id="modal-buyout-prices" class="modal-overlay hidden">
+            <div class="modal-card" style="max-width:700px;">
+              <div class="modal-header">
+                <span>Confirm Buy-out Prices</span>
+                <button class="modal-close" id="btn-close-buyout-prices">×</button>
+              </div>
+              <div style="padding:20px;overflow-y:auto;max-height:70vh;">
+                <p style="font-size:0.88rem;color:var(--grey-600);margin-bottom:16px;">
+                  Enter the confirmed price for each item as quoted by the pharmacy.
+                </p>
+                <div id="buyout-price-lines"></div>
+                <div id="buyout-price-error" class="form-error hidden"></div>
+              </div>
+              <div class="form-actions" style="padding:0 20px 20px;">
+                <button class="btn-primary" id="btn-buyout-submit-approval">Submit for Approval</button>
+                <button class="btn-secondary" id="btn-cancel-buyout-prices">Cancel</button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div class="page-view" id="page-invoices">
@@ -2636,8 +2904,9 @@ If you cannot read an item clearly, include it with description marked as "[uncl
     });
 
     // ── Hook into page navigation to init requests page ───────────────
-    window._requestsInitDone = false;
-    window._ordersInitDone   = false;
+    window._requestsInitDone  = false;
+    window._ordersInitDone    = false;
+    window._approvalsInitDone = false;
     function showPageExtended(name) {
       showPage(name);
       if (name === 'requests' && !window._requestsInitDone && currentUser && currentRole) {
@@ -2647,6 +2916,10 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       if (name === 'orders' && !window._ordersInitDone && currentUser && currentRole) {
         window._ordersInitDone = true;
         initOrdersPage(currentUser, currentRole);
+      }
+      if (name === 'approval' && !window._approvalsInitDone && currentUser && currentRole) {
+        window._approvalsInitDone = true;
+        initApprovalsPage(currentUser, currentRole);
       }
     }
     // Re-bind nav items to extended showPage
@@ -3319,37 +3592,7 @@ Respond ONLY with a JSON array. Example:
         q = query(collection(db,'pharmacy_orders'), orderBy('createdAt','desc'));
       }
       onSnapshot(q, snap => {
-        const el = document.getElementById('orders-list');
-        if (!el) return;
-        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (docs.length === 0) {
-          el.innerHTML = '<div class="list-empty">No orders yet.</div>';
-          return;
-        }
-        el.innerHTML = '';
-        docs.forEach(ord => {
-          const div = document.createElement('div');
-          div.className = 'order-list-item';
-          const date = ord.createdAt?.toDate
-            ? ord.createdAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})
-            : '—';
-          div.innerHTML = `
-            <div class="order-list-top">
-              <div>
-                <span class="order-type-badge ${ord.orderType}">${ord.orderType}</span>
-                <strong style="margin-left:8px;font-size:0.88rem;">${ord.supplierName||'—'}</strong>
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <span class="status-pill ${ord.status?.replace('_','-')}">${(ord.status||'').replace('_',' ')}</span>
-                <span class="request-date">${date}</span>
-              </div>
-            </div>
-            <div style="font-size:0.8rem;color:var(--grey-600);">
-              Ward: ${ord.ward||'—'} · R${(ord.totalEstIncl||0).toFixed(2)} incl
-            </div>
-          `;
-          el.appendChild(div);
-        });
+        renderOrdersList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       });
     }
 
@@ -3411,6 +3654,8 @@ Respond ONLY with a JSON array. Example:
       await loadSuppliersAndDoctors();
       subscribeOrdersPageRequests('pending');
       subscribeOrders('');
+      // Finance users get rejected badge on Orders nav
+      if (role === 'finance') subscribeRejectedBadge();
     }
 
   </script>
