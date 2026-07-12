@@ -1776,122 +1776,6 @@
 
           </div>
 
-          <!-- ── Order action modals (mark sent, presale upload, buy-out prices) ── -->
-
-          <!-- Mark as Sent modal -->
-          <div id="modal-mark-sent" class="modal-overlay hidden">
-            <div class="modal-card" style="max-width:480px;">
-              <div class="modal-header">
-                <span>Mark Order as Sent</span>
-                <button class="modal-close" id="btn-close-mark-sent">×</button>
-              </div>
-              <div style="padding:20px;">
-                <p style="font-size:0.9rem;color:var(--grey-600);margin-bottom:16px;">
-                  Confirm you have sent this order to the supplier externally (email, phone, or portal).
-                </p>
-                <div class="form-row">
-                  <label class="form-label">Sent to</label>
-                  <input type="text" id="sent-to-name" class="form-input" placeholder="Contact name at supplier" />
-                </div>
-                <div class="form-row">
-                  <label class="form-label">Method</label>
-                  <select id="sent-method" class="form-input">
-                    <option value="email">Email</option>
-                    <option value="phone">Phone</option>
-                    <option value="portal">Supplier portal</option>
-                    <option value="in_person">In person</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-actions" style="padding:0 20px 20px;">
-                <button class="btn-primary" id="btn-confirm-mark-sent">Confirm Sent</button>
-                <button class="btn-secondary" id="btn-cancel-mark-sent">Cancel</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Presale Upload modal -->
-          <div id="modal-presale-upload" class="modal-overlay hidden">
-            <div class="modal-card" style="max-width:900px;">
-              <div class="modal-header">
-                <span>Upload Beaconmed Presale</span>
-                <button class="modal-close" id="btn-close-presale-upload">×</button>
-              </div>
-              <div style="padding:20px;overflow-y:auto;max-height:75vh;">
-
-                <!-- Step 1: Upload -->
-                <div id="presale-upload-step1">
-                  <div class="form-row">
-                    <label class="form-label">PRE Number <span class="req">*</span></label>
-                    <input type="text" id="presale-pre-number" class="form-input"
-                      placeholder="e.g. PRE1323686" />
-                  </div>
-                  <div class="form-row">
-                    <label class="form-label">Presale PDF <span class="req">*</span>
-                      <span class="form-hint">Upload the Beaconmed presale document</span>
-                    </label>
-                    <input type="file" id="presale-file" class="form-input" accept="application/pdf,image/*" />
-                  </div>
-                  <div id="presale-upload-error" class="form-error hidden"></div>
-                  <div class="form-actions">
-                    <button class="btn-primary" id="btn-read-presale">Read Presale with AI</button>
-                  </div>
-                  <div id="presale-reading" class="hidden">
-                    <div class="reading-indicator">
-                      <div class="spinner-sm"></div>
-                      <span>Reading presale — please wait…</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Step 2: Match lines -->
-                <div id="presale-upload-step2" class="hidden">
-                  <div class="review-banner">
-                    <strong>Presale extracted — review each line and confirm the match to your order.</strong>
-                    Unmatched order lines will revert to pending on the original request.
-                  </div>
-                  <div id="presale-match-table"></div>
-                  <div id="presale-unmatched-section" class="hidden">
-                    <div style="margin-top:14px;padding:12px;background:#FFF0F0;border-radius:8px;border:1px solid #FFCCCC;">
-                      <strong style="color:var(--red);">⚠ Unmatched order lines</strong>
-                      <p style="font-size:0.82rem;color:var(--grey-600);margin-top:4px;">
-                        These items were not on the presale. They will revert to pending on the original request.
-                      </p>
-                      <div id="presale-unmatched-list"></div>
-                    </div>
-                  </div>
-                  <div id="presale-match-error" class="form-error hidden"></div>
-                  <div class="form-actions">
-                    <button class="btn-secondary" id="btn-presale-back">← Re-upload</button>
-                    <button class="btn-primary" id="btn-presale-confirm">Confirm & Submit for Approval</button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-
-          <!-- Buy-out Price Entry modal -->
-          <div id="modal-buyout-prices" class="modal-overlay hidden">
-            <div class="modal-card" style="max-width:700px;">
-              <div class="modal-header">
-                <span>Confirm Buy-out Prices</span>
-                <button class="modal-close" id="btn-close-buyout-prices">×</button>
-              </div>
-              <div style="padding:20px;overflow-y:auto;max-height:70vh;">
-                <p style="font-size:0.88rem;color:var(--grey-600);margin-bottom:16px;">
-                  Enter the confirmed price for each item as quoted by the pharmacy.
-                </p>
-                <div id="buyout-price-lines"></div>
-                <div id="buyout-price-error" class="form-error hidden"></div>
-              </div>
-              <div class="form-actions" style="padding:0 20px 20px;">
-                <button class="btn-primary" id="btn-buyout-submit-approval">Submit for Approval</button>
-                <button class="btn-secondary" id="btn-cancel-buyout-prices">Cancel</button>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         <div class="page-view" id="page-invoices">
@@ -4202,5 +4086,118 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     }
 
   </script>
+  <!-- ── GLOBAL MODALS — outside all page-views so they overlay any screen ── -->
+
+  <!-- Mark as Sent modal -->
+  <div id="modal-mark-sent" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:480px;">
+      <div class="modal-header">
+        <span>Mark Order as Sent</span>
+        <button class="modal-close" id="btn-close-mark-sent">×</button>
+      </div>
+      <div style="padding:20px;">
+        <p style="font-size:0.9rem;color:var(--grey-600);margin-bottom:16px;">
+          Confirm you have sent this order to the supplier externally (email, phone, or portal).
+        </p>
+        <div class="form-row">
+          <label class="form-label">Sent to</label>
+          <input type="text" id="sent-to-name" class="form-input" placeholder="Contact name at supplier" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Method</label>
+          <select id="sent-method" class="form-input">
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+            <option value="portal">Supplier portal</option>
+            <option value="in_person">In person</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-actions" style="padding:0 20px 20px;">
+        <button class="btn-primary" id="btn-confirm-mark-sent">Confirm Sent</button>
+        <button class="btn-secondary" id="btn-cancel-mark-sent">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Presale Upload modal -->
+  <div id="modal-presale-upload" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:900px;">
+      <div class="modal-header">
+        <span>Upload Beaconmed Presale</span>
+        <button class="modal-close" id="btn-close-presale-upload">×</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto;max-height:75vh;">
+        <div id="presale-upload-step1">
+          <div class="form-row">
+            <label class="form-label">PRE Number <span class="req">*</span></label>
+            <input type="text" id="presale-pre-number" class="form-input" placeholder="e.g. PRE1323686" />
+          </div>
+          <div class="form-row">
+            <label class="form-label">Presale PDF <span class="req">*</span>
+              <span class="form-hint">Upload the Beaconmed presale document</span>
+            </label>
+            <input type="file" id="presale-file" class="form-input" accept="application/pdf,image/*" />
+          </div>
+          <div id="presale-upload-error" class="form-error hidden"></div>
+          <div class="form-actions">
+            <button class="btn-primary" id="btn-read-presale">Read Presale with AI</button>
+          </div>
+          <div id="presale-reading" class="hidden">
+            <div class="reading-indicator">
+              <div class="spinner-sm"></div>
+              <span>Reading presale — please wait…</span>
+            </div>
+          </div>
+        </div>
+        <div id="presale-upload-step2" class="hidden">
+          <div class="review-banner">
+            <strong>Presale extracted — review each line and confirm the match to your order.</strong>
+            Unmatched order lines will revert to pending on the original request.
+          </div>
+          <div id="presale-match-table"></div>
+          <div id="presale-unmatched-section" class="hidden">
+            <div style="margin-top:14px;padding:12px;background:#FFF0F0;border-radius:8px;border:1px solid #FFCCCC;">
+              <strong style="color:var(--red);">⚠ Unmatched order lines</strong>
+              <p style="font-size:0.82rem;color:var(--grey-600);margin-top:4px;">
+                These items were not on the presale and will revert to pending on the original request.
+              </p>
+              <div id="presale-unmatched-list"></div>
+            </div>
+          </div>
+          <div id="presale-match-error" class="form-error hidden"></div>
+          <div class="form-actions">
+            <button class="btn-secondary" id="btn-presale-back">← Re-upload</button>
+            <button class="btn-primary" id="btn-presale-confirm">Confirm & Submit for Approval</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buy-out Price Entry modal -->
+  <div id="modal-buyout-prices" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:700px;">
+      <div class="modal-header">
+        <span>Confirm Buy-out Prices</span>
+        <button class="modal-close" id="btn-close-buyout-prices">×</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto;max-height:70vh;">
+        <p style="font-size:0.88rem;color:var(--grey-600);margin-bottom:16px;">
+          Enter the confirmed price for each item as quoted by the pharmacy.
+        </p>
+        <div id="buyout-price-lines"></div>
+        <div id="buyout-price-error" class="form-error hidden"></div>
+      </div>
+      <div class="form-actions" style="padding:0 20px 20px;">
+        <button class="btn-primary" id="btn-buyout-submit-approval">Submit for Approval</button>
+        <button class="btn-secondary" id="btn-cancel-buyout-prices">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit request modal — placed globally so it overlays any screen -->
+  <div id="edit-request-modal-global" class="hidden"></div>
+
 </body>
 </html>
