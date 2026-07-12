@@ -3606,17 +3606,17 @@ Respond ONLY with a JSON array. Example:
             e.stopPropagation();
             const action = btn.dataset.action;
             const ordId  = btn.dataset.ordId;
-            const snap2  = await getDocs(query(collection(db,'pharmacy_orders'),
-              where('__name__','==', ordId)));
-            if (snap2.empty) return;
-            const order = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
+            // Fetch order document directly by ID
+            const ordDocRef = doc(db, 'pharmacy_orders', ordId);
+            const ordDocSnap = await getDoc(ordDocRef);
+            if (!ordDocSnap.exists()) return;
+            const order = { id: ordDocSnap.id, ...ordDocSnap.data() };
             if (action === 'mark-sent')      openMarkSentModal(order);
             if (action === 'upload-presale') openPresaleUploadModal(order);
             if (action === 'buyout-prices')  openBuyoutPricesModal(order);
             if (action === 'view-rejected')
               alert(`Rejected by COO.\n\nReason: ${order.rejectionReason||'No reason given'}\n\nEdit and resubmit.`);
             if (action === 'print-order') {
-              // Load order lines from Firestore and generate PDF
               const linesSnap2 = await getDocs(
                 query(collection(db,'pharmacy_order_lines'), where('orderId','==', ordId)));
               const lines2 = linesSnap2.docs.map(d => ({ id: d.id, ...d.data() }));
