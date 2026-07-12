@@ -3687,6 +3687,10 @@ Respond ONLY with a JSON array. Example:
           : '—';
         const sc = (ord.status||'').replace(/_/g,'-');
         let actionBtn = '';
+        const printable = ['draft','sent','presale_received','pending_approval'].includes(ord.status);
+        const printBtn  = printable
+          ? `<button class="btn-use-item" data-action="print-order" data-ord-id="${ord.id}" style="background:var(--teal);">📄 Print</button>`
+          : '';
         if (ord.status === 'draft')
           actionBtn = `<button class="btn-use-item" data-action="mark-sent" data-ord-id="${ord.id}">Mark as Sent</button>`;
         else if (ord.status === 'sent' && ord.orderType === 'presale')
@@ -3704,6 +3708,7 @@ Respond ONLY with a JSON array. Example:
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
               <span class="status-pill ${sc}">${(ord.status||'').replace(/_/g,' ')}</span>
               <span class="request-date">${date}</span>
+              ${printBtn}
               ${actionBtn}
             </div>
           </div>
@@ -3726,6 +3731,14 @@ Respond ONLY with a JSON array. Example:
             if (action === 'buyout-prices')  openBuyoutPricesModal(order);
             if (action === 'view-rejected')
               alert(`Rejected by COO.\n\nReason: ${order.rejectionReason||'No reason given'}\n\nEdit and resubmit.`);
+            if (action === 'print-order') {
+              // Load order lines from Firestore and generate PDF
+              const linesSnap2 = await getDocs(
+                query(collection(db,'pharmacy_order_lines'), where('orderId','==', ordId)));
+              const lines2 = linesSnap2.docs.map(d => ({ id: d.id, ...d.data() }));
+              const html   = generateOrderPDF(order, lines2, ordId);
+              downloadPDF(html, `HAE_${order.orderType==='presale'?'Order':'BuyOut'}_${new Date().toISOString().slice(0,10)}`);
+            }
           });
         }
         el.appendChild(div);
