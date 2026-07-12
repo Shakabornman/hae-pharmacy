@@ -1211,6 +1211,23 @@
       border-radius: 4px; background: #FFF0F0; color: var(--red); white-space: nowrap;
     }
     .invoice-summary-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    /* ── Suppliers (contacts) ───────────────────────────────────────────── */
+    .supplier-type-badge {
+      font-size: 0.72rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .supplier-type-badge.primary { background: #EAF0FB; color: var(--mid-blue); }
+    .supplier-type-badge.buyout  { background: #E8F5E9; color: var(--green); }
+    .contact-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.3fr 1fr 90px 26px;
+      gap: 6px; align-items: center; padding: 8px; margin-bottom: 6px;
+      background: var(--grey-100); border-radius: var(--radius); font-size: 0.8rem;
+    }
+    .contact-row input[type="text"], .contact-row input[type="email"], .contact-row input[type="tel"] {
+      width: 100%; padding: 6px 8px; border: 1px solid var(--grey-300);
+      border-radius: 6px; font-size: 0.8rem;
+    }
     .nav-rejected-badge {
       margin-left: auto; background: var(--red); color: var(--white);
       font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 10px;
@@ -1293,6 +1310,7 @@
         <div class="nav-item" data-page="reconcile" id="nav-reconcile">🔄 Reconciliation</div>
 
         <div class="nav-section-label">Reference</div>
+        <div class="nav-item" data-page="suppliers" id="nav-suppliers">🏭 Suppliers</div>
         <div class="nav-item" data-page="formulary" id="nav-formulary">💊 Formulary</div>
         <div class="nav-item" data-page="trifour" id="nav-trifour">📊 Trifour Import</div>
       </nav>
@@ -1908,6 +1926,72 @@
 
         </div>
 
+        <div class="page-view" id="page-suppliers">
+          <div class="page-header">
+            <h1>Suppliers</h1>
+            <p>Manage supplier contacts — used to auto-fill the correct pharmacist's email or number when marking an order as sent.</p>
+          </div>
+
+          <!-- ── Suppliers list view ─────────────────────────────────────── -->
+          <div id="suppliers-list-view">
+            <div class="card">
+              <div class="card-title">All Suppliers</div>
+              <div id="suppliers-list">
+                <div class="list-loading">Loading…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Supplier edit view ──────────────────────────────────────── -->
+          <div id="supplier-detail-view" class="hidden">
+
+            <div class="detail-back">
+              <button class="btn-secondary" id="btn-supplier-back">← Back to Suppliers</button>
+              <span id="supplier-detail-title" class="detail-title"></span>
+            </div>
+
+            <div class="card mb-20">
+              <div class="card-title">Supplier Details</div>
+              <div class="form-row">
+                <label class="form-label">Name <span class="req">*</span></label>
+                <input type="text" id="supplier-name" class="form-input" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Type</label>
+                <select id="supplier-type" class="form-input">
+                  <option value="primary">Primary (Presale)</option>
+                  <option value="buyout">Buy-out</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;">
+                  <input type="checkbox" id="supplier-active" /> Active
+                </label>
+              </div>
+            </div>
+
+            <div class="card mb-20">
+              <div class="card-title-row">
+                <div class="card-title">Contacts</div>
+                <button class="btn-secondary" id="btn-add-supplier-contact">+ Add Contact</button>
+              </div>
+              <div class="invoice-line-head" style="grid-template-columns:1fr 1fr 1.3fr 1fr 90px 26px;">
+                <div>Name</div><div>Role</div><div>Email</div><div>Phone / WhatsApp</div><div>Primary</div><div></div>
+              </div>
+              <div id="supplier-contacts-list"></div>
+              <p style="font-size:0.78rem;color:var(--grey-600);margin-top:6px;">
+                The Primary contact is pre-selected automatically when marking an order as sent to this supplier.
+              </p>
+            </div>
+
+            <div id="supplier-detail-error" class="form-error hidden"></div>
+            <div class="form-actions">
+              <button class="btn-primary" id="btn-save-supplier">Save Changes</button>
+            </div>
+          </div>
+
+        </div>
+
         <div class="page-view" id="page-formulary">
           <div class="page-header"><h1>Formulary</h1></div>
           <div class="placeholder-card">
@@ -1994,10 +2078,11 @@
       const navInvoices  = document.getElementById('nav-invoices');
       const navReconcile = document.getElementById('nav-reconcile');
       const navTrifour   = document.getElementById('nav-trifour');
+      const navSuppliers = document.getElementById('nav-suppliers');
       const navOrders    = document.getElementById('nav-orders');
 
       if (role === 'nursing') {
-        [navOrders, navApprovals, navInvoices, navReconcile, navTrifour].forEach(n => {
+        [navOrders, navApprovals, navInvoices, navReconcile, navTrifour, navSuppliers].forEach(n => {
           if (n) n.classList.add('disabled');
         });
       } else if (role === 'finance') {
@@ -2018,6 +2103,7 @@
         window._approvalsInitDone = false;
         window._invoicesInitDone  = false;
         window._reconcileInitDone = false;
+        window._suppliersInitDone = false;
         return;
       }
 
@@ -2909,6 +2995,7 @@ If you cannot read an item clearly, include it with description marked as "[uncl
     window._approvalsInitDone = false;
     window._invoicesInitDone  = false;
     window._reconcileInitDone = false;
+    window._suppliersInitDone = false;
     function showPageExtended(name) {
       showPage(name);
       if (name === 'requests' && !window._requestsInitDone && currentUser && currentRole) {
@@ -2930,6 +3017,10 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       if (name === 'reconcile' && !window._reconcileInitDone && currentUser && currentRole) {
         window._reconcileInitDone = true;
         initReconcilePage(currentUser, currentRole);
+      }
+      if (name === 'suppliers' && !window._suppliersInitDone && currentUser && currentRole) {
+        window._suppliersInitDone = true;
+        initSuppliersPage(currentUser, currentRole);
       }
     }
     // Re-bind nav items to extended showPage
@@ -3759,17 +3850,58 @@ Respond ONLY with a JSON array. Example:
     // ── Mark as Sent ──────────────────────────────────────────────────
     function openMarkSentModal(order) {
       currentOrderForAction = order;
-      document.getElementById('sent-to-name').value = '';
-      document.getElementById('sent-method').value  = 'email';
+      document.getElementById('sent-to-name').value      = '';
+      document.getElementById('sent-method').value       = 'email';
+      document.getElementById('sent-detail-email').value = '';
+      document.getElementById('sent-detail-phone').value = '';
+      const supplier  = suppliersCache.find(s => s.id === order.supplierId);
+      const contacts  = supplier?.contacts || [];
+      const contactSel = document.getElementById('sent-contact');
+      contactSel.innerHTML = '<option value="">— Manual entry —</option>';
+      contacts.forEach((c, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `${c.name || 'Unnamed'}${c.role ? ' — ' + c.role : ''}${c.isPrimary ? ' ★' : ''}`;
+        contactSel.appendChild(opt);
+      });
+      const primaryIdx = contacts.findIndex(c => c.isPrimary);
+      contactSel.value = primaryIdx >= 0 ? String(primaryIdx) : '';
+      applySentContactSelection();
+      applyMarkSentMethodVisibility();
       document.getElementById('modal-mark-sent').classList.remove('hidden');
     }
+    function applyMarkSentMethodVisibility() {
+      const method = document.getElementById('sent-method').value;
+      document.getElementById('sent-detail-email-row').classList.toggle('hidden', method !== 'email');
+      document.getElementById('sent-detail-phone-row').classList.toggle('hidden', !['phone','whatsapp'].includes(method));
+    }
+    function applySentContactSelection() {
+      const supplier = suppliersCache.find(s => s.id === currentOrderForAction?.supplierId);
+      const idx       = document.getElementById('sent-contact').value;
+      const contact   = (idx !== '' && supplier?.contacts) ? supplier.contacts[idx] : null;
+      if (contact) {
+        document.getElementById('sent-to-name').value      = contact.name  || '';
+        document.getElementById('sent-detail-email').value = contact.email || '';
+        document.getElementById('sent-detail-phone').value = contact.phone || '';
+      }
+    }
+    document.getElementById('sent-contact')?.addEventListener('change', applySentContactSelection);
+    document.getElementById('sent-method')?.addEventListener('change', applyMarkSentMethodVisibility);
+
     document.getElementById('btn-confirm-mark-sent')?.addEventListener('click', async () => {
       const btn = document.getElementById('btn-confirm-mark-sent');
       btn.disabled = true; btn.textContent = 'Saving…';
+      const method    = document.getElementById('sent-method').value;
+      const supplier  = suppliersCache.find(s => s.id === currentOrderForAction.supplierId);
+      const idx       = document.getElementById('sent-contact').value;
+      const contact   = (idx !== '' && supplier?.contacts) ? supplier.contacts[idx] : null;
       await updateOrderStatus(currentOrderForAction.id, 'sent', {
         sentAt: serverTimestamp(),
         sentTo: document.getElementById('sent-to-name').value.trim(),
-        sentMethod: document.getElementById('sent-method').value,
+        sentMethod: method,
+        sentToContactName: contact?.name || null,
+        sentToEmail: method === 'email' ? document.getElementById('sent-detail-email').value.trim() || null : null,
+        sentToPhone: ['phone','whatsapp'].includes(method) ? document.getElementById('sent-detail-phone').value.trim() || null : null,
         sentBy: currentUser.uid,
       });
       document.getElementById('modal-mark-sent').classList.add('hidden');
@@ -4690,6 +4822,145 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       btn.disabled = false; btn.textContent = '✓ Reconcile Invoice';
     });
 
+    // ════════════════════════════════════════════════════════════════
+    // SUPPLIERS — contact management (Finance + Executive)
+    // ════════════════════════════════════════════════════════════════
+
+    let allSuppliersCache   = [];  // unfiltered — for this admin page (includes inactive)
+    let currentSupplierEdit = null;
+    let supplierContactsWorking = [];
+
+    function subscribeSuppliersPage() {
+      onSnapshot(collection(db,'pharmacy_suppliers'), snap => {
+        allSuppliersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Keep the shared suppliersCache (used by order creation + Mark as Sent) in sync
+        suppliersCache = allSuppliersCache.filter(s => s.active !== false);
+        renderSuppliersList(allSuppliersCache);
+        if (currentSupplierEdit) {
+          const updated = allSuppliersCache.find(s => s.id === currentSupplierEdit.id);
+          if (updated) currentSupplierEdit = updated;
+        }
+      });
+    }
+
+    function renderSuppliersList(docs) {
+      const el = document.getElementById('suppliers-list');
+      if (!el) return;
+      if (!docs.length) { el.innerHTML = '<div class="list-empty">No suppliers found.</div>'; return; }
+      el.innerHTML = '';
+      docs.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'approval-order-card';
+        const contactCount = (s.contacts||[]).length;
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong style="font-size:0.9rem;">${s.name||'—'}</strong>
+              <span class="supplier-type-badge ${s.type||''}" style="margin-left:8px;">${s.type||'—'}</span>
+              ${s.active === false ? '<span class="status-pill cancelled" style="margin-left:6px;">inactive</span>' : ''}
+            </div>
+            <span style="font-size:0.8rem;color:var(--grey-600);">${contactCount} contact${contactCount!==1?'s':''}</span>
+          </div>`;
+        div.addEventListener('click', () => openSupplierDetail(s));
+        el.appendChild(div);
+      });
+    }
+
+    async function initSuppliersPage(user, role) {
+      subscribeSuppliersPage();
+    }
+
+    function openSupplierDetail(supplier) {
+      currentSupplierEdit = supplier;
+      supplierContactsWorking = JSON.parse(JSON.stringify(supplier.contacts || []));
+      document.getElementById('suppliers-list-view').classList.add('hidden');
+      document.getElementById('supplier-detail-view').classList.remove('hidden');
+      document.getElementById('supplier-detail-title').textContent = supplier.name || '—';
+      document.getElementById('supplier-name').value     = supplier.name || '';
+      document.getElementById('supplier-type').value     = supplier.type || 'buyout';
+      document.getElementById('supplier-active').checked = supplier.active !== false;
+      document.getElementById('supplier-detail-error').classList.add('hidden');
+      renderSupplierContacts();
+    }
+    document.getElementById('btn-supplier-back')?.addEventListener('click', () => {
+      document.getElementById('supplier-detail-view').classList.add('hidden');
+      document.getElementById('suppliers-list-view').classList.remove('hidden');
+      currentSupplierEdit = null;
+      supplierContactsWorking = [];
+    });
+
+    function renderSupplierContacts() {
+      const container = document.getElementById('supplier-contacts-list');
+      container.innerHTML = '';
+      supplierContactsWorking.forEach((c, idx) => {
+        const row = document.createElement('div');
+        row.className = 'contact-row';
+        row.innerHTML = `
+          <input type="text" class="c-name" value="${c.name||''}" placeholder="Name" />
+          <input type="text" class="c-role" value="${c.role||''}" placeholder="e.g. Pharmacist" />
+          <input type="email" class="c-email" value="${c.email||''}" placeholder="Email" />
+          <input type="tel" class="c-phone" value="${c.phone||''}" placeholder="Phone / WhatsApp" />
+          <label style="display:flex;align-items:center;gap:4px;font-size:0.75rem;justify-content:center;">
+            <input type="checkbox" class="c-primary" ${c.isPrimary?'checked':''} />
+          </label>
+          <button class="btn-remove-line" title="Remove contact">×</button>`;
+        row.querySelector('.c-name').addEventListener('input', e => { c.name = e.target.value; });
+        row.querySelector('.c-role').addEventListener('input', e => { c.role = e.target.value; });
+        row.querySelector('.c-email').addEventListener('input', e => { c.email = e.target.value; });
+        row.querySelector('.c-phone').addEventListener('input', e => { c.phone = e.target.value; });
+        row.querySelector('.c-primary').addEventListener('change', e => {
+          if (e.target.checked) supplierContactsWorking.forEach(other => { if (other !== c) other.isPrimary = false; });
+          c.isPrimary = e.target.checked;
+          renderSupplierContacts();
+        });
+        row.querySelector('.btn-remove-line').addEventListener('click', () => {
+          supplierContactsWorking.splice(idx, 1);
+          renderSupplierContacts();
+        });
+        container.appendChild(row);
+      });
+    }
+    document.getElementById('btn-add-supplier-contact')?.addEventListener('click', () => {
+      supplierContactsWorking.push({
+        name: '', role: '', email: '', phone: '',
+        isPrimary: supplierContactsWorking.length === 0,
+      });
+      renderSupplierContacts();
+    });
+
+    document.getElementById('btn-save-supplier')?.addEventListener('click', async () => {
+      const btn   = document.getElementById('btn-save-supplier');
+      const errEl = document.getElementById('supplier-detail-error');
+      const name  = document.getElementById('supplier-name').value.trim();
+      if (!name) {
+        errEl.textContent = 'Supplier name is required.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        const cleanContacts = supplierContactsWorking
+          .filter(c => c.name && c.name.trim())
+          .map(c => ({
+            name: c.name.trim(), role: (c.role||'').trim(),
+            email: (c.email||'').trim(), phone: (c.phone||'').trim(),
+            isPrimary: !!c.isPrimary,
+          }));
+        await updateDoc(doc(db,'pharmacy_suppliers', currentSupplierEdit.id), {
+          name,
+          type: document.getElementById('supplier-type').value,
+          active: document.getElementById('supplier-active').checked,
+          contacts: cleanContacts,
+          updatedAt: serverTimestamp(),
+        });
+        showToast('Supplier saved.');
+        document.getElementById('btn-supplier-back').click();
+      } catch(e) {
+        errEl.textContent = 'Failed: ' + e.message; errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Save Changes';
+    });
+
   </script>
   <!-- ── GLOBAL MODALS — outside all page-views so they overlay any screen ── -->
 
@@ -4702,20 +4973,35 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       </div>
       <div style="padding:20px;">
         <p style="font-size:0.9rem;color:var(--grey-600);margin-bottom:16px;">
-          Confirm you have sent this order to the supplier externally (email, phone, or portal).
+          Confirm you have sent this order to the supplier externally (email, phone, WhatsApp, or portal).
         </p>
         <div class="form-row">
-          <label class="form-label">Sent to</label>
+          <label class="form-label">Contact</label>
+          <select id="sent-contact" class="form-input">
+            <option value="">— Manual entry —</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Sent to (name)</label>
           <input type="text" id="sent-to-name" class="form-input" placeholder="Contact name at supplier" />
         </div>
         <div class="form-row">
           <label class="form-label">Method</label>
           <select id="sent-method" class="form-input">
             <option value="email">Email</option>
+            <option value="whatsapp">WhatsApp</option>
             <option value="phone">Phone</option>
             <option value="portal">Supplier portal</option>
             <option value="in_person">In person</option>
           </select>
+        </div>
+        <div class="form-row hidden" id="sent-detail-email-row">
+          <label class="form-label">Email address</label>
+          <input type="email" id="sent-detail-email" class="form-input" placeholder="pharmacist@supplier.co.za" />
+        </div>
+        <div class="form-row hidden" id="sent-detail-phone-row">
+          <label class="form-label">Phone / WhatsApp number</label>
+          <input type="tel" id="sent-detail-phone" class="form-input" placeholder="e.g. 082 000 0000" />
         </div>
       </div>
       <div class="form-actions" style="padding:0 20px 20px;">
