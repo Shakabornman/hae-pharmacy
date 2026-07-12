@@ -3654,8 +3654,538 @@ Respond ONLY with a JSON array. Example:
       await loadSuppliersAndDoctors();
       subscribeOrdersPageRequests('pending');
       subscribeOrders('');
-      // Finance users get rejected badge on Orders nav
       if (role === 'finance') subscribeRejectedBadge();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // STEP 6 — APPROVAL WORKFLOW + STEP 5 ADDITIONS
+    // ════════════════════════════════════════════════════════════════
+
+    let currentApprovalOrder  = null;
+    let currentOrderForAction = null;
+    let presaleExtractedLines = [];
+    let orderLinesForPresale  = [];
+
+    // ── Update order status helper ────────────────────────────────────
+    async function updateOrderStatus(orderId, newStatus, extraFields = {}) {
+      await updateDoc(doc(db, 'pharmacy_orders', orderId), {
+        status: newStatus, updatedAt: serverTimestamp(), ...extraFields,
+      });
+    }
+
+    // ── Render orders list with action buttons ────────────────────────
+    function renderOrdersList(docs) {
+      const el = document.getElementById('orders-list');
+      if (!el) return;
+      if (docs.length === 0) { el.innerHTML = '<div class="list-empty">No orders yet.</div>'; return; }
+      el.innerHTML = '';
+      docs.forEach(ord => {
+        const div  = document.createElement('div');
+        div.className = 'order-list-item';
+        const date = ord.createdAt?.toDate
+          ? ord.createdAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})
+          : '—';
+        const sc = (ord.status||'').replace(/_/g,'-');
+        let actionBtn = '';
+        if (ord.status === 'draft')
+          actionBtn = `<button class="btn-use-item" data-action="mark-sent" data-ord-id="${ord.id}">Mark as Sent</button>`;
+        else if (ord.status === 'sent' && ord.orderType === 'presale')
+          actionBtn = `<button class="btn-use-item" data-action="upload-presale" data-ord-id="${ord.id}">Upload Presale</button>`;
+        else if (ord.status === 'sent' && ord.orderType === 'buyout')
+          actionBtn = `<button class="btn-use-item" data-action="buyout-prices" data-ord-id="${ord.id}">Enter Prices</button>`;
+        else if (ord.status === 'rejected')
+          actionBtn = `<button class="btn-use-item" style="background:var(--red);" data-action="view-rejected" data-ord-id="${ord.id}">View Rejection</button>`;
+        div.innerHTML = `
+          <div class="order-list-top">
+            <div>
+              <span class="order-type-badge ${ord.orderType}">${ord.orderType}</span>
+              <strong style="margin-left:8px;font-size:0.88rem;">${ord.supplierName||'—'}</strong>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <span class="status-pill ${sc}">${(ord.status||'').replace(/_/g,' ')}</span>
+              <span class="request-date">${date}</span>
+              ${actionBtn}
+            </div>
+          </div>
+          <div style="font-size:0.8rem;color:var(--grey-600);">
+            Ward: ${ord.ward||'—'} · R${(ord.totalEstIncl||0).toFixed(2)} incl
+            ${ord.rejectionReason?`<span style="color:var(--red);margin-left:8px;">Rejected: ${ord.rejectionReason.slice(0,40)}</span>`:''}
+          </div>`;
+        const btn = div.querySelector('[data-action]');
+        if (btn) {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            const ordId  = btn.dataset.ordId;
+            const snap2  = await getDocs(query(collection(db,'pharmacy_orders'),
+              where('__name__','==', ordId)));
+            if (snap2.empty) return;
+            const order = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
+            if (action === 'mark-sent')      openMarkSentModal(order);
+            if (action === 'upload-presale') openPresaleUploadModal(order);
+            if (action === 'buyout-prices')  openBuyoutPricesModal(order);
+            if (action === 'view-rejected')
+              alert(`Rejected by COO.\n\nReason: ${order.rejectionReason||'No reason given'}\n\nEdit and resubmit.`);
+          });
+        }
+        el.appendChild(div);
+      });
+    }
+
+    // ── Mark as Sent ──────────────────────────────────────────────────
+    function openMarkSentModal(order) {
+      currentOrderForAction = order;
+      document.getElementById('sent-to-name').value = '';
+      document.getElementById('sent-method').value  = 'email';
+      document.getElementById('modal-mark-sent').classList.remove('hidden');
+    }
+    document.getElementById('btn-confirm-mark-sent')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-confirm-mark-sent');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      await updateOrderStatus(currentOrderForAction.id, 'sent', {
+        sentAt: serverTimestamp(),
+        sentTo: document.getElementById('sent-to-name').value.trim(),
+        sentMethod: document.getElementById('sent-method').value,
+        sentBy: currentUser.uid,
+      });
+      document.getElementById('modal-mark-sent').classList.add('hidden');
+      showToast('Order marked as sent.');
+      btn.disabled = false; btn.textContent = 'Confirm Sent';
+    });
+    ['btn-close-mark-sent','btn-cancel-mark-sent'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', () =>
+        document.getElementById('modal-mark-sent').classList.add('hidden'));
+    });
+
+    // ── Presale Upload ────────────────────────────────────────────────
+    function openPresaleUploadModal(order) {
+      currentOrderForAction = order;
+      document.getElementById('presale-pre-number').value = order.preNumber || '';
+      document.getElementById('presale-file').value       = '';
+      document.getElementById('presale-upload-step1').classList.remove('hidden');
+      document.getElementById('presale-upload-step2').classList.add('hidden');
+      document.getElementById('presale-upload-error').classList.add('hidden');
+      document.getElementById('presale-reading').classList.add('hidden');
+      document.getElementById('btn-read-presale').classList.remove('hidden');
+      document.getElementById('modal-presale-upload').classList.remove('hidden');
+    }
+    document.getElementById('btn-read-presale')?.addEventListener('click', async () => {
+      const file   = document.getElementById('presale-file').files[0];
+      const preNum = document.getElementById('presale-pre-number').value.trim();
+      const errEl  = document.getElementById('presale-upload-error');
+      if (!file || !preNum) {
+        errEl.textContent = 'Please enter the PRE number and select the file.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+      document.getElementById('btn-read-presale').classList.add('hidden');
+      document.getElementById('presale-reading').classList.remove('hidden');
+      try {
+        presaleExtractedLines = await readPresaleWithAI(file);
+        const linesSnap = await getDocs(
+          query(collection(db,'pharmacy_order_lines'), where('orderId','==', currentOrderForAction.id)));
+        orderLinesForPresale = linesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderPresaleMatchTable(preNum);
+        document.getElementById('presale-upload-step1').classList.add('hidden');
+        document.getElementById('presale-upload-step2').classList.remove('hidden');
+      } catch(e) {
+        errEl.textContent = 'Failed to read presale: ' + e.message;
+        errEl.classList.remove('hidden');
+        document.getElementById('btn-read-presale').classList.remove('hidden');
+        document.getElementById('presale-reading').classList.add('hidden');
+      }
+    });
+    async function readPresaleWithAI(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64 = e.target.result.split(',')[1];
+          const mime   = file.type || 'application/pdf';
+          try {
+            const resp = await fetch(PROXY_URL, {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001', max_tokens: 2048,
+                messages:[{ role:'user', content:[
+                  { type:'image', source:{ type:'base64', media_type:mime, data:base64 }},
+                  { type:'text', text:`This is a Transpharm/Beaconmed presale document.
+Extract every line item where Unit Qty Supplied > 0. For each return:
+- description, nappiCode (if visible), qty (supplied), unitPriceExcl, totalIncl
+Respond ONLY with a JSON array, no markdown.
+Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10,"unitPriceExcl":18.97,"totalIncl":218.16}]`}
+                ]}]
+              })
+            });
+            const data = await resp.json();
+            const text = data.content?.[0]?.text || '[]';
+            resolve(JSON.parse(text.replace(/```json|```/g,'').trim()));
+          } catch(err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    function renderPresaleMatchTable(preNum) {
+      const container = document.getElementById('presale-match-table');
+      container.innerHTML = '';
+      const matchedIds = new Set();
+      presaleExtractedLines.forEach((pl, pIdx) => {
+        let matched = null, matchType = 'none';
+        if (pl.nappiCode) {
+          matched = orderLinesForPresale.find(ol => ol.nappiCode && ol.nappiCode === pl.nappiCode);
+          if (matched) matchType = 'auto';
+        }
+        if (!matched) {
+          const pDesc = pl.description?.toLowerCase() || '';
+          matched = orderLinesForPresale.find(ol => {
+            const oDesc = ol.description?.toLowerCase() || '';
+            return oDesc.includes(pDesc.split(' ')[0]) || pDesc.includes(oDesc.split(' ')[0]);
+          });
+          if (matched) matchType = 'auto';
+        }
+        if (matched) matchedIds.add(matched.id);
+        const row = document.createElement('div');
+        row.className = 'presale-match-row';
+        row.dataset.presaleIdx = pIdx;
+        row.dataset.matchedLineId = matched?.id || '';
+        const orderOpts = orderLinesForPresale.map(ol =>
+          `<option value="${ol.id}" ${matched?.id === ol.id ? 'selected' : ''}>${ol.description?.slice(0,35)||'—'}</option>`
+        ).join('');
+        row.innerHTML = `
+          <div>
+            <div class="presale-match-desc">${pl.description}</div>
+            <div style="font-size:0.75rem;color:var(--grey-600);">NAPPI: ${pl.nappiCode||'—'} · Qty: ${pl.qty}</div>
+          </div>
+          <div class="presale-match-arrow">→</div>
+          <div>
+            <select class="form-input" style="font-size:0.8rem;padding:5px;" data-presale-idx="${pIdx}">
+              <option value="">No match — revert to pending</option>${orderOpts}
+            </select>
+          </div>
+          <div class="presale-match-price">R${(pl.unitPriceExcl||0).toFixed(2)}</div>
+          <div class="presale-match-status ${matchType}">${matchType==='auto'?'Auto-matched':matchType==='manual'?'Manual':'No match'}</div>`;
+        row.querySelector('select').addEventListener('change', (e) => {
+          row.dataset.matchedLineId = e.target.value;
+          const s = row.querySelector('.presale-match-status');
+          s.textContent = e.target.value ? 'Manual' : 'No match';
+          s.className   = `presale-match-status ${e.target.value ? 'manual' : 'none'}`;
+        });
+        container.appendChild(row);
+      });
+      const unmatched = orderLinesForPresale.filter(ol => !matchedIds.has(ol.id));
+      const usec = document.getElementById('presale-unmatched-section');
+      const ulist = document.getElementById('presale-unmatched-list');
+      if (unmatched.length > 0) {
+        ulist.innerHTML = unmatched.map(ol =>
+          `<div style="padding:4px 0;font-size:0.85rem;font-weight:600;color:var(--navy);">${ol.description} × ${ol.qtyOrdered}</div>`
+        ).join('');
+        usec.classList.remove('hidden');
+      } else { usec.classList.add('hidden'); }
+    }
+    document.getElementById('btn-presale-back')?.addEventListener('click', () => {
+      document.getElementById('presale-upload-step2').classList.add('hidden');
+      document.getElementById('presale-upload-step1').classList.remove('hidden');
+      document.getElementById('btn-read-presale').classList.remove('hidden');
+      document.getElementById('presale-reading').classList.add('hidden');
+    });
+    document.getElementById('btn-presale-confirm')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-presale-confirm');
+      const errEl = document.getElementById('presale-match-error');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const preNum   = document.getElementById('presale-pre-number').value.trim();
+      const matchRows = document.querySelectorAll('#presale-match-table .presale-match-row');
+      try {
+        let totalExcl = 0;
+        for (const row of matchRows) {
+          const pIdx   = parseInt(row.dataset.presaleIdx);
+          const lineId = row.querySelector('select').value;
+          const pl     = presaleExtractedLines[pIdx];
+          if (lineId && pl) {
+            totalExcl += (pl.unitPriceExcl||0) * (pl.qty||1);
+            await updateDoc(doc(db,'pharmacy_order_lines',lineId), {
+              unitPriceExcl: pl.unitPriceExcl||0,
+              totalExcl: Math.round((pl.unitPriceExcl||0)*(pl.qty||1)*100)/100,
+              qtyOrdered: pl.qty||1, qtyOutstanding: pl.qty||1,
+              status: 'open', updatedAt: serverTimestamp(),
+            });
+          }
+        }
+        const matchedIds = new Set(Array.from(matchRows).map(r=>r.querySelector('select').value).filter(Boolean));
+        for (const ol of orderLinesForPresale.filter(ol=>!matchedIds.has(ol.id))) {
+          await updateDoc(doc(db,'pharmacy_order_lines',ol.id),{status:'cancelled',updatedAt:serverTimestamp()});
+        }
+        await updateOrderStatus(currentOrderForAction.id, 'pending_approval', {
+          preNumber: preNum,
+          totalEstExcl: Math.round(totalExcl*100)/100,
+          totalEstIncl: Math.round(totalExcl*1.15*100)/100,
+          presaleUploadedAt: serverTimestamp(),
+          presaleUploadedBy: currentUser.uid,
+        });
+        document.getElementById('modal-presale-upload').classList.add('hidden');
+        showToast('Presale confirmed — submitted for COO approval.');
+      } catch(e) {
+        errEl.textContent = 'Failed: ' + e.message; errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Confirm & Submit for Approval';
+    });
+    document.getElementById('btn-close-presale-upload')?.addEventListener('click', () =>
+      document.getElementById('modal-presale-upload').classList.add('hidden'));
+
+    // ── Buy-out Prices ────────────────────────────────────────────────
+    async function openBuyoutPricesModal(order) {
+      currentOrderForAction = order;
+      const linesSnap = await getDocs(
+        query(collection(db,'pharmacy_order_lines'), where('orderId','==', order.id)));
+      const lines = linesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const container = document.getElementById('buyout-price-lines');
+      container.innerHTML = '';
+      lines.forEach(line => {
+        const row = document.createElement('div');
+        row.className = 'buyout-price-row';
+        row.dataset.lineId = line.id;
+        row.dataset.qty    = line.qtyOrdered || 1;
+        row.innerHTML = `
+          <div class="buyout-price-desc">${line.description}
+            <br><span style="font-size:0.75rem;font-weight:400;color:var(--grey-600);">Qty: ${line.qtyOrdered} · ${line.packSize||''}</span>
+          </div>
+          <div>
+            <div style="font-size:0.72rem;font-weight:700;color:var(--grey-600);margin-bottom:4px;">PRICE EXCL</div>
+            <input type="number" step="0.01" class="order-line-input" id="bo-price-${line.id}"
+              value="${line.unitPriceExcl||''}" placeholder="0.00" />
+          </div>
+          <div style="font-size:0.82rem;color:var(--grey-600);padding-top:20px;" id="bo-total-${line.id}">
+            ${line.unitPriceExcl?'R'+(line.unitPriceExcl*line.qtyOrdered*1.15).toFixed(2)+' incl':'—'}
+          </div>`;
+        row.querySelector(`#bo-price-${line.id}`).addEventListener('input', (e) => {
+          const p = parseFloat(e.target.value)||0;
+          document.getElementById(`bo-total-${line.id}`).textContent =
+            p>0 ? `R${(p*(line.qtyOrdered||1)*1.15).toFixed(2)} incl` : '—';
+        });
+        container.appendChild(row);
+      });
+      document.getElementById('buyout-price-error').classList.add('hidden');
+      document.getElementById('modal-buyout-prices').classList.remove('hidden');
+    }
+    document.getElementById('btn-buyout-submit-approval')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-buyout-submit-approval');
+      const errEl = document.getElementById('buyout-price-error');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const rows = document.querySelectorAll('#buyout-price-lines .buyout-price-row');
+      let totalExcl = 0;
+      try {
+        for (const row of rows) {
+          const lineId = row.dataset.lineId;
+          const qty    = parseFloat(row.dataset.qty) || 1;
+          const price  = parseFloat(document.getElementById(`bo-price-${lineId}`)?.value)||0;
+          totalExcl += price * qty;
+          await updateDoc(doc(db,'pharmacy_order_lines',lineId),{
+            unitPriceExcl: price, totalExcl: Math.round(price*qty*100)/100, updatedAt: serverTimestamp()
+          });
+        }
+        await updateOrderStatus(currentOrderForAction.id, 'pending_approval', {
+          totalEstExcl: Math.round(totalExcl*100)/100,
+          totalEstIncl: Math.round(totalExcl*1.15*100)/100,
+        });
+        document.getElementById('modal-buyout-prices').classList.add('hidden');
+        showToast('Buy-out prices saved — submitted for COO approval.');
+      } catch(e) {
+        errEl.textContent = 'Failed: ' + e.message; errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Submit for Approval';
+    });
+    ['btn-close-buyout-prices','btn-cancel-buyout-prices'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', () =>
+        document.getElementById('modal-buyout-prices').classList.add('hidden'));
+    });
+
+    // ── Approvals ─────────────────────────────────────────────────────
+    function openApprovalDetail(order) {
+      currentApprovalOrder = order;
+      document.getElementById('approval-list-view').classList.add('hidden');
+      document.getElementById('approval-detail-view').classList.remove('hidden');
+      document.getElementById('approval-detail-title').textContent =
+        `${(order.orderType||'').toUpperCase()} — ${order.supplierName||'—'}`;
+      document.getElementById('approval-comment').value = '';
+      document.getElementById('approval-action-error').classList.add('hidden');
+      const metaEl = document.getElementById('approval-order-detail');
+      const date   = order.createdAt?.toDate
+        ? order.createdAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})
+        : '—';
+      metaEl.innerHTML = `
+        <div class="card-title">Order Summary</div>
+        <div class="approval-detail-meta">
+          <div><div class="approval-meta-label">Type</div>
+            <div class="approval-meta-value"><span class="order-type-badge ${order.orderType}">${order.orderType}</span></div>
+          </div>
+          <div><div class="approval-meta-label">Supplier</div>
+            <div class="approval-meta-value">${order.supplierName||'—'}</div></div>
+          <div><div class="approval-meta-label">Ward</div>
+            <div class="approval-meta-value">${order.ward||'—'}</div></div>
+          <div><div class="approval-meta-label">Date</div>
+            <div class="approval-meta-value">${date}</div></div>
+          <div><div class="approval-meta-label">PRE Number</div>
+            <div class="approval-meta-value">${order.preNumber||'—'}</div></div>
+          <div><div class="approval-meta-label">Doctor</div>
+            <div class="approval-meta-value">${order.doctorName||'—'}</div></div>
+          <div><div class="approval-meta-label">Total Excl</div>
+            <div class="approval-meta-value">R${(order.totalEstExcl||0).toFixed(2)}</div></div>
+          <div><div class="approval-meta-label">VAT 15%</div>
+            <div class="approval-meta-value">R${((order.totalEstExcl||0)*0.15).toFixed(2)}</div></div>
+          <div><div class="approval-meta-label">Total Incl</div>
+            <div class="approval-meta-value" style="color:var(--navy);font-size:1.05rem;">R${(order.totalEstIncl||0).toFixed(2)}</div></div>
+          <div><div class="approval-meta-label">Status</div>
+            <div class="approval-meta-value">
+              <span class="status-pill ${(order.status||'').replace(/_/g,'-')}">${(order.status||'').replace(/_/g,' ')}</span>
+            </div></div>
+        </div>
+        ${order.notes?`<div style="margin-top:8px;font-size:0.85rem;color:var(--grey-600);">Notes: ${order.notes}</div>`:''}`;
+      getDocs(query(collection(db,'pharmacy_order_lines'),
+        where('orderId','==', order.id))).then(snap => {
+        const lines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const linesEl = document.getElementById('approval-lines-table');
+        if (!lines.length) { linesEl.innerHTML = '<div class="list-empty">No lines found.</div>'; return; }
+        const isP = order.orderType === 'presale';
+        linesEl.innerHTML = `<table class="approval-lines-table"><thead><tr>
+          <th>#</th>${isP?'<th>NAPPI</th><th>TFM</th>':''}<th>Description</th>
+          <th>Pack</th><th>Qty</th><th>SCH</th><th>Price Excl</th><th>Total Excl</th><th>Status</th>
+        </tr></thead><tbody>${lines.map((l,i)=>`<tr>
+          <td>${i+1}</td>${isP?`<td>${l.nappiCode||'—'}</td><td>${l.tfmCode||'—'}</td>`:''}
+          <td><strong>${l.description}</strong></td><td>${l.packSize||'—'}</td>
+          <td>${l.qtyOrdered}</td><td>${l.schedule||'—'}</td>
+          <td>${l.unitPriceExcl?'R'+l.unitPriceExcl.toFixed(2):'TBC'}</td>
+          <td>${l.totalExcl?'R'+l.totalExcl.toFixed(2):'TBC'}</td>
+          <td><span class="presale-match-status ${l.unitPriceExcl?'auto':'none'}">${l.unitPriceExcl?'Confirmed':'TBC'}</span></td>
+        </tr>`).join('')}</tbody></table>`;
+      });
+      const isPending = order.status === 'pending_approval';
+      document.getElementById('approval-actions-card').classList.toggle('hidden', !isPending);
+      const actMsg  = document.getElementById('approval-actioned-msg');
+      const actCont = document.getElementById('approval-actioned-content');
+      if (!isPending) {
+        actMsg.classList.remove('hidden');
+        const aDate = order.approvedAt?.toDate?.()?.toLocaleDateString('en-ZA') ||
+                      order.rejectedAt?.toDate?.()?.toLocaleDateString('en-ZA') || '—';
+        actCont.innerHTML = order.status === 'approved'
+          ? `<div style="color:var(--green);font-weight:700;">✓ Approved ${aDate}</div>${order.approvalComment?`<div style="font-size:0.85rem;margin-top:4px;">${order.approvalComment}</div>`:''}`
+          : `<div style="color:var(--red);font-weight:700;">✗ Rejected ${aDate}</div><div style="color:var(--red);font-size:0.85rem;margin-top:4px;">Reason: ${order.rejectionReason||'—'}</div>`;
+      } else { actMsg.classList.add('hidden'); }
+    }
+    document.getElementById('btn-approval-back')?.addEventListener('click', () => {
+      document.getElementById('approval-detail-view').classList.add('hidden');
+      document.getElementById('approval-list-view').classList.remove('hidden');
+      currentApprovalOrder = null;
+    });
+    document.getElementById('btn-approve-order')?.addEventListener('click', async () => {
+      const comment = document.getElementById('approval-comment').value.trim();
+      const btn     = document.getElementById('btn-approve-order');
+      btn.disabled  = true; btn.textContent = 'Approving…';
+      try {
+        await updateOrderStatus(currentApprovalOrder.id, 'approved', {
+          approvedBy: currentUser.uid, approvedAt: serverTimestamp(), approvalComment: comment,
+        });
+        showToast('Order approved.');
+        document.getElementById('btn-approval-back').click();
+      } catch(e) {
+        document.getElementById('approval-action-error').textContent = 'Failed: ' + e.message;
+        document.getElementById('approval-action-error').classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = '✓ Approve Order';
+    });
+    document.getElementById('btn-reject-order')?.addEventListener('click', async () => {
+      const comment = document.getElementById('approval-comment').value.trim();
+      const errEl   = document.getElementById('approval-action-error');
+      if (!comment) {
+        errEl.textContent = 'A reason is mandatory when rejecting.';
+        errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+      const btn = document.getElementById('btn-reject-order');
+      btn.disabled = true; btn.textContent = 'Rejecting…';
+      try {
+        await updateOrderStatus(currentApprovalOrder.id, 'rejected', {
+          rejectedBy: currentUser.uid, rejectedAt: serverTimestamp(), rejectionReason: comment,
+        });
+        showToast('Order rejected — Finance notified via status change.');
+        document.getElementById('btn-approval-back').click();
+      } catch(e) {
+        errEl.textContent = 'Failed: ' + e.message; errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = '✗ Reject Order';
+    });
+
+    function renderApprovalList(containerId, docs, isPending) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      if (!docs.length) {
+        el.innerHTML = `<div class="list-empty">${isPending?'No orders awaiting approval.':'No recently actioned orders.'}</div>`;
+        return;
+      }
+      el.innerHTML = '';
+      docs.forEach(ord => {
+        const div  = document.createElement('div');
+        div.className = 'approval-order-card';
+        const date = ord.createdAt?.toDate
+          ? ord.createdAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})
+          : '—';
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div>
+              <span class="order-type-badge ${ord.orderType}">${ord.orderType}</span>
+              <strong style="margin-left:8px;font-size:0.88rem;">${ord.supplierName||'—'}</strong>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span class="status-pill ${(ord.status||'').replace(/_/g,'-')}">${(ord.status||'').replace(/_/g,' ')}</span>
+              <span class="request-date">${date}</span>
+            </div>
+          </div>
+          <div style="font-size:0.8rem;color:var(--grey-600);">
+            Ward: ${ord.ward||'—'} · R${(ord.totalEstIncl||0).toFixed(2)} incl
+            ${ord.rejectionReason?`<br><span style="color:var(--red);">Rejected: ${ord.rejectionReason.slice(0,50)}</span>`:''}
+          </div>`;
+        div.addEventListener('click', () => openApprovalDetail(ord));
+        el.appendChild(div);
+      });
+    }
+
+    function subscribeApprovals() {
+      const qP = query(collection(db,'pharmacy_orders'),
+        where('status','==','pending_approval'), orderBy('createdAt','desc'));
+      onSnapshot(qP, snap => {
+        const docs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const count = docs.length;
+        const countEl = document.getElementById('approval-pending-count');
+        if (countEl) { countEl.textContent = count; countEl.className = `approval-count${count===0?' zero':''}`; }
+        const navA = document.querySelector('[data-page="approval"]');
+        let badge  = navA?.querySelector('.nav-badge');
+        if (count > 0) {
+          if (!badge) { badge = document.createElement('span'); badge.className = 'nav-badge'; navA?.appendChild(badge); }
+          badge.textContent = count;
+        } else if (badge) { badge.remove(); }
+        renderApprovalList('approval-pending-list', docs, true);
+      });
+      const qA = query(collection(db,'pharmacy_orders'),
+        where('status','in',['approved','rejected']), orderBy('updatedAt','desc'));
+      onSnapshot(qA, snap => {
+        renderApprovalList('approval-actioned-list',
+          snap.docs.map(d => ({ id: d.id, ...d.data() })), false);
+      });
+    }
+
+    async function initApprovalsPage(user, role) {
+      subscribeApprovals();
+    }
+
+    function subscribeRejectedBadge() {
+      const q = query(collection(db,'pharmacy_orders'),
+        where('status','==','rejected'), where('createdBy','==', currentUser.uid));
+      onSnapshot(q, snap => {
+        const navO = document.querySelector('[data-page="orders"]');
+        let badge  = navO?.querySelector('.nav-rejected-badge');
+        if (snap.docs.length > 0) {
+          if (!badge) { badge = document.createElement('span'); badge.className = 'nav-rejected-badge'; navO?.appendChild(badge); }
+          badge.textContent = snap.docs.length;
+        } else if (badge) { badge.remove(); }
+      });
     }
 
   </script>
