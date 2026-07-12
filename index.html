@@ -3600,31 +3600,34 @@ Respond ONLY with a JSON array. Example:
             Ward: ${ord.ward||'—'} · R${(ord.totalEstIncl||0).toFixed(2)} incl
             ${ord.rejectionReason?`<span style="color:var(--red);margin-left:8px;">Rejected: ${ord.rejectionReason.slice(0,40)}</span>`:''}
           </div>`;
-        const btn = div.querySelector('[data-action]');
-        if (btn) {
+        // Bind all action buttons on this card
+        div.querySelectorAll('[data-action]').forEach(btn => {
           btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const action = btn.dataset.action;
             const ordId  = btn.dataset.ordId;
-            // Fetch order document directly by ID
-            const ordDocRef = doc(db, 'pharmacy_orders', ordId);
-            const ordDocSnap = await getDoc(ordDocRef);
-            if (!ordDocSnap.exists()) return;
-            const order = { id: ordDocSnap.id, ...ordDocSnap.data() };
-            if (action === 'mark-sent')      openMarkSentModal(order);
-            if (action === 'upload-presale') openPresaleUploadModal(order);
-            if (action === 'buyout-prices')  openBuyoutPricesModal(order);
-            if (action === 'view-rejected')
-              alert(`Rejected by COO.\n\nReason: ${order.rejectionReason||'No reason given'}\n\nEdit and resubmit.`);
-            if (action === 'print-order') {
-              const linesSnap2 = await getDocs(
-                query(collection(db,'pharmacy_order_lines'), where('orderId','==', ordId)));
-              const lines2 = linesSnap2.docs.map(d => ({ id: d.id, ...d.data() }));
-              const html   = generateOrderPDF(order, lines2, ordId);
-              downloadPDF(html, `HAE_${order.orderType==='presale'?'Order':'BuyOut'}_${new Date().toISOString().slice(0,10)}`);
-            }
+            console.log('Action clicked:', action, ordId);
+            try {
+              const ordDocRef  = doc(db, 'pharmacy_orders', ordId);
+              const ordDocSnap = await getDoc(ordDocRef);
+              console.log('Order exists:', ordDocSnap.exists());
+              if (!ordDocSnap.exists()) { console.error('Order not found'); return; }
+              const order = { id: ordDocSnap.id, ...ordDocSnap.data() };
+              if (action === 'mark-sent')      { console.log('Calling openMarkSentModal'); openMarkSentModal(order); }
+              if (action === 'upload-presale') openPresaleUploadModal(order);
+              if (action === 'buyout-prices')  openBuyoutPricesModal(order);
+              if (action === 'view-rejected')
+                alert(`Rejected by COO.\n\nReason: ${order.rejectionReason||'No reason given'}\n\nEdit and resubmit.`);
+              if (action === 'print-order') {
+                const linesSnap2 = await getDocs(
+                  query(collection(db,'pharmacy_order_lines'), where('orderId','==', ordId)));
+                const lines2 = linesSnap2.docs.map(d => ({ id: d.id, ...d.data() }));
+                const html   = generateOrderPDF(order, lines2, ordId);
+                downloadPDF(html, `HAE_${order.orderType==='presale'?'Order':'BuyOut'}_${new Date().toISOString().slice(0,10)}`);
+              }
+            } catch(err) { console.error('Action error:', err); }
           });
-        }
+        });
         el.appendChild(div);
       });
     }
