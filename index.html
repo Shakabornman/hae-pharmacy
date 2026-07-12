@@ -1345,7 +1345,7 @@
 
             <!-- Tab: Log WhatsApp -->
             <div class="tab-panel hidden" id="tab-log-whatsapp">
-              <div class="card">
+              <div class="card mb-20">
                 <div class="card-title">Log WhatsApp Request</div>
                 <div class="form-row">
                   <label class="form-label">Nurse / Staff name <span class="req">*</span></label>
@@ -1373,6 +1373,13 @@
                 <div id="wa-req-error" class="form-error hidden"></div>
                 <div class="form-actions">
                   <button class="btn-primary" id="btn-wa-submit">Submit WhatsApp Request</button>
+                </div>
+              </div>
+              <!-- WhatsApp requests list -->
+              <div class="card">
+                <div class="card-title">Submitted WhatsApp Requests</div>
+                <div id="whatsapp-requests-list">
+                  <div class="list-loading">Loading…</div>
                 </div>
               </div>
             </div>
@@ -1436,6 +1443,14 @@
                 </div>
 
               </div>
+              <!-- Scan requests list -->
+              <div class="card mt-20">
+                <div class="card-title">Submitted Scan Requests</div>
+                <div id="scan-requests-list">
+                  <div class="list-loading">Loading…</div>
+                </div>
+              </div>
+
             </div>
 
           </div>
@@ -2247,7 +2262,9 @@
     }
 
     // Store web requests in memory for tab-click rendering
-    let webRequestsCache = [];
+    let webRequestsCache      = [];
+    let whatsappRequestsCache = [];
+    let scanRequestsCache     = [];
 
     function subscribeWebRequests() {
       const q = query(
@@ -2257,9 +2274,34 @@
       );
       onSnapshot(q, snap => {
         webRequestsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Only render if the element exists (tab is visible)
         const el = document.getElementById('web-requests-list');
         if (el) renderRequestList('web-requests-list', webRequestsCache);
+      });
+    }
+
+    function subscribeWhatsAppRequests() {
+      const q = query(
+        collection(db,'pharmacy_requests'),
+        where('channel','==','whatsapp'),
+        orderBy('createdAt','desc')
+      );
+      onSnapshot(q, snap => {
+        whatsappRequestsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const el = document.getElementById('whatsapp-requests-list');
+        if (el) renderRequestList('whatsapp-requests-list', whatsappRequestsCache);
+      });
+    }
+
+    function subscribeScanRequests() {
+      const q = query(
+        collection(db,'pharmacy_requests'),
+        where('channel','==','scan'),
+        orderBy('createdAt','desc')
+      );
+      onSnapshot(q, snap => {
+        scanRequestsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const el = document.getElementById('scan-requests-list');
+        if (el) renderRequestList('scan-requests-list', scanRequestsCache);
       });
     }
 
@@ -2338,6 +2380,8 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         // Subscribe to all requests and web requests
         subscribeFinanceRequests('');
         subscribeWebRequests();
+        subscribeWhatsAppRequests();
+        subscribeScanRequests();
         // Bind tab switching NOW — after finance view is visible
         document.querySelectorAll('.tab-btn').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -2350,8 +2394,15 @@ If you cannot read an item clearly, include it with description marked as "[uncl
             btn.classList.add('active');
             const panel = document.getElementById(`tab-${tabId}`);
             if (panel) { panel.classList.remove('hidden'); panel.classList.add('active'); }
+            // Render cached lists when tab becomes visible
             if (tabId === 'new-web-request' && webRequestsCache.length > 0) {
               renderRequestList('web-requests-list', webRequestsCache);
+            }
+            if (tabId === 'log-whatsapp' && whatsappRequestsCache.length > 0) {
+              renderRequestList('whatsapp-requests-list', whatsappRequestsCache);
+            }
+            if (tabId === 'upload-scan' && scanRequestsCache.length > 0) {
+              renderRequestList('scan-requests-list', scanRequestsCache);
             }
           });
         });
@@ -2757,7 +2808,9 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       document.getElementById('detail-request-title').textContent =
         `${req.ward} — ${req.requestedByName || ''}`;
 
-      // Render request detail
+      // Ensure formulary is loaded before rendering detail
+      await loadFormulary();
+
       const date = req.createdAt?.toDate
         ? req.createdAt.toDate().toLocaleDateString('en-ZA', {day:'2-digit',month:'short',year:'numeric'})
         : '—';
@@ -2782,15 +2835,22 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         <div class="detail-field">
           <div class="detail-label">Items — click + to add to order</div>
           <div class="detail-items-list">
-            ${(req.items || []).map((item, i) => `
-              <div class="detail-item-row">
-                <div>
-                  <div class="detail-item-name">${item.description}</div>
-                  <div class="detail-item-qty">Qty: ${item.qtyRequested} ${item.inFormulary ? '✓' : '⚠ Not on formulary'}</div>
-                </div>
-                <button class="btn-use-item" data-item-idx="${i}">+ Add to order</button>
-              </div>
-            `).join('')}
+            ${(req.items || []).map((item, i) => {
+              // Check formulary status — use stored inFormulary AND cross-check cache
+              const inFormulary = item.inFormulary ||
+                formularyCache.some(p => p.id === item.productId);
+              const formularyBadge = inFormulary
+                ? `<span style="display:inline-block;background:#D6EDD6;color:#1A5C2A;font-size:0.7rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:4px;">✓ Formulary</span>`
+                : `<span style="display:inline-block;background:#FFF3CD;color:#7A5000;font-size:0.7rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:4px;">⚠ Not on formulary</span>`;
+              return `
+                <div class="detail-item-row">
+                  <div>
+                    <div class="detail-item-name">${item.description} ${formularyBadge}</div>
+                    <div class="detail-item-qty">Qty: ${item.qtyRequested}</div>
+                  </div>
+                  <button class="btn-use-item" data-item-idx="${i}">+ Add to order</button>
+                </div>`;
+            }).join('')}
           </div>
         </div>
         ${req.scanUrl ? `<div class="detail-field">
@@ -2804,18 +2864,17 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         btn.addEventListener('click', () => {
           const idx  = parseInt(btn.dataset.itemIdx);
           const item = req.items[idx];
-          // Look up formulary data for this item
           const prod = formularyCache.find(p => p.id === item.productId) || {};
           buildOrderLine('order-lines-container', {
-            productId:       item.productId || '',
-            description:     item.description,
-            nappiCode:       prod.nappiCode || '',
-            tfmCode:         prod.tfmCode   || '',
-            schedule:        prod.schedule  || '',
-            packSize:        prod.packSize  || '',
+            productId:        item.productId || '',
+            description:      item.description,
+            nappiCode:        prod.nappiCode || '',
+            tfmCode:          prod.tfmCode   || '',
+            schedule:         prod.schedule  || '',
+            packSize:         prod.packSize  || '',
             currentPriceExcl: prod.currentPriceExcl || 0,
-            qtyRequested:    item.qtyRequested,
-            inFormulary:     item.inFormulary,
+            qtyRequested:     item.qtyRequested,
+            inFormulary:      item.inFormulary,
           });
           btn.textContent = '✓ Added';
           btn.classList.add('used');
