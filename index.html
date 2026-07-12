@@ -2761,9 +2761,37 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       row.querySelector('.btn-remove-item').addEventListener('click', () => row.remove());
 
       // AI search
-      row.querySelector('.btn-ai-search').addEventListener('click', () => {
-        const desc = document.getElementById(`ol-desc-input-${id}`)?.value || prefill?.description || '';
-        openAISearch(id, desc);
+      row.querySelector('.btn-ai-search').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const desc = document.getElementById(`ol-desc-input-${id}`)?.value.trim()
+          || prefill?.description || '';
+        if (!desc) {
+          alert('Please enter an item description first before searching for alternatives.');
+          return;
+        }
+        // Show AI panel
+        const panel = document.getElementById('ai-search-panel');
+        if (panel) panel.style.display = 'block';
+        // Set search product label
+        const labelEl = document.getElementById('ai-search-product');
+        if (labelEl) labelEl.textContent = desc;
+        // Set results loading
+        const resultsEl = document.getElementById('ai-search-results');
+        if (resultsEl) resultsEl.innerHTML = '<div class="list-loading">Searching formulary…</div>';
+        // Store target line id
+        aiSearchTargetLineId = id;
+        // Search formulary
+        const term    = desc.toLowerCase().split(' ')[0];
+        const results = formularyCache.filter(p =>
+          (p.description?.toLowerCase().includes(term) ||
+           p.genericName?.toLowerCase().includes(term)) &&
+          p.description !== desc
+        ).slice(0, 10);
+        if (results.length > 0) {
+          renderAIResults(results);
+        } else {
+          askClaudeForAlternative(desc);
+        }
       });
 
       document.getElementById(containerId).appendChild(row);
