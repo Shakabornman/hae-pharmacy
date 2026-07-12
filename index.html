@@ -2757,10 +2757,13 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         </div>
       `;
 
+      // Append to container FIRST so querySelector works reliably
+      document.getElementById(containerId).appendChild(row);
+
       // Remove
       row.querySelector('.btn-remove-item').addEventListener('click', () => row.remove());
 
-      // AI search
+      // AI search — inline handler to avoid scope issues
       row.querySelector('.btn-ai-search').addEventListener('click', (e) => {
         e.stopPropagation();
         const desc = document.getElementById(`ol-desc-input-${id}`)?.value.trim()
@@ -2769,18 +2772,13 @@ If you cannot read an item clearly, include it with description marked as "[uncl
           alert('Please enter an item description first before searching for alternatives.');
           return;
         }
-        // Show AI panel
         const panel = document.getElementById('ai-search-panel');
         if (panel) panel.style.display = 'block';
-        // Set search product label
         const labelEl = document.getElementById('ai-search-product');
         if (labelEl) labelEl.textContent = desc;
-        // Set results loading
         const resultsEl = document.getElementById('ai-search-results');
         if (resultsEl) resultsEl.innerHTML = '<div class="list-loading">Searching formulary…</div>';
-        // Store target line id
         aiSearchTargetLineId = id;
-        // Search formulary
         const term    = desc.toLowerCase().split(' ')[0];
         const results = formularyCache.filter(p =>
           (p.description?.toLowerCase().includes(term) ||
@@ -2794,7 +2792,6 @@ If you cannot read an item clearly, include it with description marked as "[uncl
         }
       });
 
-      document.getElementById(containerId).appendChild(row);
       return row;
     }
 
