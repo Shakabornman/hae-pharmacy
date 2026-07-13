@@ -5787,10 +5787,12 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           }).join('')}
         </div>`;
       } catch(e) {
-        el.innerHTML = `<div style="margin-top:8px;padding:10px;background:#FFF0F0;border-radius:8px;font-size:0.8rem;color:var(--red);">
-          Search failed: ${e.message}<br>
-          If this mentions a missing index, click the link Firebase gives in the browser console —
-          it creates the exact "collection group" index this search needs, one-time only.
+        const linkedMsg = e.message.replace(/(https?:\/\/\S+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--red);text-decoration:underline;">$1</a>');
+        el.innerHTML = `<div style="margin-top:8px;padding:10px;background:#FFF0F0;border-radius:8px;font-size:0.8rem;color:var(--red);word-break:break-word;">
+          Search failed: ${linkedMsg}<br>
+          If this mentions a missing index, click the link above — it takes you straight to Firebase
+          Console with the exact index pre-filled. Click Create, wait a minute or two for it to
+          finish building, then search again.
         </div>`;
       }
     });
