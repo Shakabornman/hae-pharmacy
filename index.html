@@ -2110,6 +2110,18 @@
             </div>
 
             <div class="card mb-20">
+              <div class="card-title">Search Trifour History (all imports, by NAPPI code)</div>
+              <p style="font-size:0.8rem;color:var(--grey-600);">
+                Checks every import ever done, not just the current batch — has this NAPPI code caused a pricing issue before? Free-text search by item name isn't practical across all history (Firestore has no built-in text search), so this is NAPPI-code-exact only.
+              </p>
+              <div style="display:flex;gap:8px;">
+                <input type="text" id="trifour-history-search-nappi" class="form-input" placeholder="e.g. 0481351019" />
+                <button class="btn-secondary" id="btn-trifour-history-search" style="white-space:nowrap;">Search History</button>
+              </div>
+              <div id="trifour-history-search-result"></div>
+            </div>
+
+            <div class="card mb-20">
               <div class="card-title-row">
                 <div class="card-title">Formulary NAPPI Code Check</div>
                 <button class="btn-secondary" id="btn-check-nappi-quality">Run Check</button>
@@ -2130,14 +2142,26 @@
           <div class="tab-panel" id="tab-trifour-prices">
             <div class="card">
               <div class="card-title-row">
-                <div class="card-title">Pending Price Updates</div>
+                <div class="card-title">Price Updates</div>
                 <button class="btn-secondary" id="btn-export-prices">⬇ Download Export</button>
               </div>
+              <input type="text" id="trifour-prices-search" class="form-input" style="margin-bottom:10px;"
+                placeholder="Search this batch by item name or NAPPI code…" />
               <div class="trifour-line-head">
                 <div>Item</div><div>NAPPI</div><div>Pack</div><div>Existing</div>
                 <div>Trifour Cost</div><div>NAP / Variance</div><div>Approve At</div><div></div>
               </div>
-              <div id="trifour-prices-list"><div class="list-loading">Select an import to review.</div></div>
+              <div style="font-size:0.8rem;font-weight:700;color:var(--grey-600);margin:8px 0 4px;">
+                Pending <span id="trifour-prices-pending-count"></span>
+              </div>
+              <div id="trifour-prices-pending-list"><div class="list-loading">Select an import to review.</div></div>
+
+              <div class="card-title-row" style="margin-top:16px;cursor:pointer;" id="trifour-prices-actioned-toggle">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--grey-600);">
+                  Actioned <span id="trifour-prices-actioned-count"></span> — click to show/hide
+                </div>
+              </div>
+              <div id="trifour-prices-actioned-list" class="hidden"></div>
             </div>
           </div>
 
@@ -2151,11 +2175,23 @@
               <p style="font-size:0.8rem;color:var(--grey-600);margin-bottom:10px;">
                 These products were auto-created because no match was found in the formulary. Check the price before marking reviewed — there is no separate formulary edit screen yet, so this is the only place to correct them right now.
               </p>
+              <input type="text" id="trifour-newitems-search" class="form-input" style="margin-bottom:10px;"
+                placeholder="Search this batch by item name or NAPPI code…" />
               <div class="trifour-line-head">
                 <div>Item</div><div>NAPPI</div><div>Pack</div><div>—</div>
                 <div>Cost Price</div><div>NAP / Variance</div><div>Correct Price</div><div></div>
               </div>
-              <div id="trifour-newitems-list"><div class="list-loading">Select an import to review.</div></div>
+              <div style="font-size:0.8rem;font-weight:700;color:var(--grey-600);margin:8px 0 4px;">
+                Pending <span id="trifour-newitems-pending-count"></span>
+              </div>
+              <div id="trifour-newitems-pending-list"><div class="list-loading">Select an import to review.</div></div>
+
+              <div class="card-title-row" style="margin-top:16px;cursor:pointer;" id="trifour-newitems-actioned-toggle">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--grey-600);">
+                  Actioned <span id="trifour-newitems-actioned-count"></span> — click to show/hide
+                </div>
+              </div>
+              <div id="trifour-newitems-actioned-list" class="hidden"></div>
             </div>
           </div>
 
@@ -2171,7 +2207,7 @@
     import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { getFirestore, doc, getDoc, collection, addDoc, setDoc, query,
+    import { getFirestore, doc, getDoc, collection, collectionGroup, addDoc, setDoc, query,
              where, orderBy, onSnapshot, serverTimestamp, updateDoc, getDocs, writeBatch }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
@@ -5128,6 +5164,8 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     let trifourWorkingRows   = [];  // parsed+matched rows awaiting confirm (client-side only)
     let currentTrifourImport = null;
     let trifourLinesUnsub    = null;
+    let trifourPriceLinesAll   = [];
+    let trifourNewItemLinesAll = [];
 
     // ── Tab switching ────────────────────────────────────────────────
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -5310,8 +5348,6 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         trifourWorkingRows = [];
         if (trifourLinesUnsub) { trifourLinesUnsub(); trifourLinesUnsub = null; }
         currentTrifourImport = null;  // let the next history snapshot auto-select this new batch
-        document.getElementById('trifour-prices-list').innerHTML   = '<div class="list-loading">Loading…</div>';
-        document.getElementById('trifour-newitems-list').innerHTML = '<div class="list-loading">Loading…</div>';
         document.getElementById('trifour-preview').classList.add('hidden');
         document.getElementById('trifour-file').value = '';
         showToast('Import complete — review staged in Price Updates / New Items.');
@@ -5365,22 +5401,54 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         collection(db, 'pharmacy_trifour', importId, 'lines'),
         snap => {
           const all = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-          const priceLines = all.filter(l => l.lineType === 'price_update');
-          const newLines   = all.filter(l => l.lineType === 'new_item');
-          const pendingPrice = priceLines.filter(l=>l.status==='pending_review').length;
-          const pendingNew   = newLines.filter(l=>l.status==='pending_review').length;
-          document.getElementById('tab-badge-prices').textContent   = pendingPrice ? `(${pendingPrice})` : '';
-          document.getElementById('tab-badge-newitems').textContent = pendingNew   ? `(${pendingNew})`   : '';
-          renderTrifourPriceLines(priceLines);
-          renderTrifourNewItemLines(newLines);
+          trifourPriceLinesAll   = all.filter(l => l.lineType === 'price_update');
+          trifourNewItemLinesAll = all.filter(l => l.lineType === 'new_item');
+          applyTrifourPriceFilter();
+          applyTrifourNewItemFilter();
         },
         err => {
           const msg = `<div class="list-empty" style="color:var(--red);">Failed to load: ${err.message}</div>`;
-          document.getElementById('trifour-prices-list').innerHTML   = msg;
-          document.getElementById('trifour-newitems-list').innerHTML = msg;
+          document.getElementById('trifour-prices-pending-list').innerHTML   = msg;
+          document.getElementById('trifour-newitems-pending-list').innerHTML = msg;
         }
       );
     }
+
+    function matchesTrifourSearch(line, term) {
+      if (!term) return true;
+      const t = term.toLowerCase();
+      return (line.item||'').toLowerCase().includes(t) || (line.nappiCode||'').includes(term);
+    }
+    function applyTrifourPriceFilter() {
+      const term = document.getElementById('trifour-prices-search')?.value.trim() || '';
+      const filtered = trifourPriceLinesAll.filter(l => matchesTrifourSearch(l, term));
+      const pending  = filtered.filter(l => l.status === 'pending_review');
+      const actioned = filtered.filter(l => l.status !== 'pending_review');
+      document.getElementById('tab-badge-prices').textContent = pending.length ? `(${pending.length})` : '';
+      document.getElementById('trifour-prices-pending-count').textContent  = `(${pending.length})`;
+      document.getElementById('trifour-prices-actioned-count').textContent = `(${actioned.length})`;
+      renderTrifourPriceLines(pending, 'trifour-prices-pending-list');
+      renderTrifourPriceLines(actioned, 'trifour-prices-actioned-list');
+    }
+    function applyTrifourNewItemFilter() {
+      const term = document.getElementById('trifour-newitems-search')?.value.trim() || '';
+      const filtered = trifourNewItemLinesAll.filter(l => matchesTrifourSearch(l, term));
+      const pending  = filtered.filter(l => l.status === 'pending_review');
+      const actioned = filtered.filter(l => l.status !== 'pending_review');
+      document.getElementById('tab-badge-newitems').textContent = pending.length ? `(${pending.length})` : '';
+      document.getElementById('trifour-newitems-pending-count').textContent  = `(${pending.length})`;
+      document.getElementById('trifour-newitems-actioned-count').textContent = `(${actioned.length})`;
+      renderTrifourNewItemLines(pending, 'trifour-newitems-pending-list');
+      renderTrifourNewItemLines(actioned, 'trifour-newitems-actioned-list');
+    }
+    document.getElementById('trifour-prices-search')?.addEventListener('input', applyTrifourPriceFilter);
+    document.getElementById('trifour-newitems-search')?.addEventListener('input', applyTrifourNewItemFilter);
+    document.getElementById('trifour-prices-actioned-toggle')?.addEventListener('click', () => {
+      document.getElementById('trifour-prices-actioned-list').classList.toggle('hidden');
+    });
+    document.getElementById('trifour-newitems-actioned-toggle')?.addEventListener('click', () => {
+      document.getElementById('trifour-newitems-actioned-list').classList.toggle('hidden');
+    });
 
     // ── Price Updates tab ────────────────────────────────────────────
     function trifourMatchWarning(line) {
@@ -5391,9 +5459,9 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         return '<div style="font-size:0.68rem;color:var(--red);">weak text match — verify this is the right product before approving</div>';
       return '<div style="font-size:0.68rem;color:var(--red);">unreliable match</div>';
     }
-    function renderTrifourPriceLines(lines) {
-      const el = document.getElementById('trifour-prices-list');
-      if (!lines.length) { el.innerHTML = '<div class="list-empty">No price update lines for this import.</div>'; return; }
+    function renderTrifourPriceLines(lines, containerId) {
+      const el = document.getElementById(containerId);
+      if (!lines.length) { el.innerHTML = '<div class="list-empty">None.</div>'; return; }
       el.innerHTML = '';
       lines.forEach(line => {
         const row = document.createElement('div');
@@ -5496,9 +5564,9 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     }
 
     // ── New Items tab ─────────────────────────────────────────────────
-    function renderTrifourNewItemLines(lines) {
-      const el = document.getElementById('trifour-newitems-list');
-      if (!lines.length) { el.innerHTML = '<div class="list-empty">No new items for this import.</div>'; return; }
+    function renderTrifourNewItemLines(lines, containerId) {
+      const el = document.getElementById(containerId);
+      if (!lines.length) { el.innerHTML = '<div class="list-empty">None.</div>'; return; }
       el.innerHTML = '';
       lines.forEach(line => {
         const row = document.createElement('div');
@@ -5673,6 +5741,58 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     document.getElementById('btn-spotcheck-detail')?.addEventListener('click', () => {
       const n = document.getElementById('spotcheck-nappi').value.trim();
       if (n) spotcheckDetail(document.getElementById('spotcheck-result'), n);
+    });
+
+    // ── Search Trifour History (all imports, by NAPPI code) ────────────
+    // Uses a Firestore collection-group query across every pharmacy_trifour/*/lines
+    // subcollection. This scales fine as history grows, unlike browsing one giant list —
+    // but it needs a "collection group" scoped index on nappiCode. If this throws an
+    // index-required error, the message includes a direct Firebase Console link to create it.
+    document.getElementById('btn-trifour-history-search')?.addEventListener('click', async () => {
+      const raw = document.getElementById('trifour-history-search-nappi').value.trim();
+      const el  = document.getElementById('trifour-history-search-result');
+      if (!raw) return;
+      const padded = raw.padStart(10,'0');
+      el.innerHTML = '<div class="list-loading">Searching all history…</div>';
+      try {
+        const snap = await getDocs(query(collectionGroup(db,'lines'), where('nappiCode','==', padded)));
+        if (snap.empty) {
+          el.innerHTML = '<div class="list-empty" style="margin-top:8px;">No history found for this NAPPI code in any import.</div>';
+          return;
+        }
+        const results = snap.docs.map(d => ({ id:d.id, ...d.data(), importRef: d.ref.parent.parent }));
+        // Fetch each parent import doc once per unique importId for context (file name/date)
+        const importCache = {};
+        for (const r of results) {
+          const iid = r.importRef.id;
+          if (!importCache[iid]) {
+            const impSnap = await getDoc(r.importRef);
+            importCache[iid] = impSnap.exists() ? impSnap.data() : {};
+          }
+        }
+        results.sort((a,b) => {
+          const ta = importCache[a.importRef.id]?.uploadedAt?.toMillis?.() || 0;
+          const tb = importCache[b.importRef.id]?.uploadedAt?.toMillis?.() || 0;
+          return tb - ta;
+        });
+        el.innerHTML = `<div style="margin-top:8px;max-height:300px;overflow-y:auto;">
+          ${results.map(r => {
+            const imp  = importCache[r.importRef.id] || {};
+            const date = imp.uploadedAt?.toDate ? imp.uploadedAt.toDate().toLocaleDateString('en-ZA') : '—';
+            return `<div style="padding:8px;background:var(--grey-100);border-radius:6px;margin-bottom:4px;font-size:0.8rem;">
+              <strong>${r.item||'—'}</strong> · ${imp.fileName||'—'} (${date})<br>
+              Trifour cost R${(r.trifourCostPrice||0).toFixed(2)} · NAP R${(r.nap||0).toFixed(2)} ·
+              <span class="status-pill ${r.status}">${(r.status||'').replace(/_/g,' ')}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+      } catch(e) {
+        el.innerHTML = `<div style="margin-top:8px;padding:10px;background:#FFF0F0;border-radius:8px;font-size:0.8rem;color:var(--red);">
+          Search failed: ${e.message}<br>
+          If this mentions a missing index, click the link Firebase gives in the browser console —
+          it creates the exact "collection group" index this search needs, one-time only.
+        </div>`;
+      }
     });
 
     // ── Formulary NAPPI code data-quality check (read-only) ─────────────
