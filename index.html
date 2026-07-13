@@ -5328,6 +5328,9 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           .sort((a,b) => (b.uploadedAt?.toMillis?.()||0) - (a.uploadedAt?.toMillis?.()||0));
         renderTrifourHistory(docs);
         if (!currentTrifourImport && docs.length) selectTrifourImport(docs[0]);
+      }, err => {
+        document.getElementById('trifour-import-history').innerHTML =
+          `<div class="list-empty" style="color:var(--red);">Failed to load import history: ${err.message}</div>`;
       });
     }
     function renderTrifourHistory(docs) {
@@ -5370,6 +5373,11 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           document.getElementById('tab-badge-newitems').textContent = pendingNew   ? `(${pendingNew})`   : '';
           renderTrifourPriceLines(priceLines);
           renderTrifourNewItemLines(newLines);
+        },
+        err => {
+          const msg = `<div class="list-empty" style="color:var(--red);">Failed to load: ${err.message}</div>`;
+          document.getElementById('trifour-prices-list').innerHTML   = msg;
+          document.getElementById('trifour-newitems-list').innerHTML = msg;
         }
       );
     }
@@ -5395,43 +5403,83 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           : '<span class="variance-badge neutral">No NAP</span>';
         const statusBadge = line.status !== 'pending_review'
           ? `<span class="status-pill ${line.status}">${line.status.replace(/_/g,' ')}</span>` : '';
+        const editable = line.status === 'pending_review';
         row.innerHTML = `
           <div><strong>${line.item}</strong>${trifourMatchWarning(line)}
-            ${!line.nappiReliable ? `<button class="btn-inline-check" data-nappi="${line.nappiCode}" style="background:none;border:none;color:var(--mid-blue);font-size:0.7rem;text-decoration:underline;cursor:pointer;padding:0;margin-top:2px;">Check on SEP registry</button>` : ''}
+            ${editable && !line.nappiReliable ? `
+              <button class="btn-inline-check" data-nappi="${line.nappiCode}" style="background:none;border:none;color:var(--mid-blue);font-size:0.7rem;text-decoration:underline;cursor:pointer;padding:0;margin-top:2px;display:block;">Check on SEP registry</button>
+              <button class="btn-inline-rematch" style="background:none;border:none;color:var(--mid-blue);font-size:0.7rem;text-decoration:underline;cursor:pointer;padding:0;">Re-match to a different product</button>
+              <div class="rematch-target" style="font-size:0.7rem;color:var(--green);margin-top:2px;"></div>
+            ` : ''}
           </div>
-          <div>${line.nappiCode}</div>
+          <div>${editable ? `<input type="text" class="edit-nappi" value="${line.nappiCode}" style="width:100%;font-family:monospace;" />` : line.nappiCode}</div>
           <div>${line.packSize}</div>
           <div>R${(line.existingPriceExcl||0).toFixed(2)}</div>
           <div>R${(line.trifourCostPrice||0).toFixed(2)}</div>
           <div>R${(line.nap||0).toFixed(2)}<br>${varBadge}</div>
-          <div>${line.status==='pending_review'
+          <div>${editable
               ? `<input type="number" class="approve-price" value="${line.proposedPriceExcl}" step="0.01" min="0" />`
               : `R${(line.proposedPriceExcl||0).toFixed(2)}`}</div>
-          <div>${line.status==='pending_review'
+          <div>${editable
               ? `<button class="btn-use-item btn-approve-price">Approve</button><button class="btn-remove-line btn-reject-price" title="Reject">×</button>`
               : statusBadge}</div>`;
-        if (line.status === 'pending_review') {
+        if (editable) {
           row.querySelector('.btn-approve-price').addEventListener('click', () => approveTrifourPriceLine(line, row));
           row.querySelector('.btn-reject-price').addEventListener('click', () => rejectTrifourPriceLine(line));
         }
         el.appendChild(row);
+
         const inlineBtn = row.querySelector('.btn-inline-check');
         if (inlineBtn) {
           const resultDiv = document.createElement('div');
           resultDiv.style.margin = '-4px 0 8px';
           el.appendChild(resultDiv);
-          inlineBtn.addEventListener('click', () => spotcheckDetail(resultDiv, inlineBtn.dataset.nappi, line.trifourCostPrice));
+          inlineBtn.addEventListener('click', () =>
+            spotcheckDetail(resultDiv, row.querySelector('.edit-nappi')?.value || line.nappiCode, line.trifourCostPrice));
+        }
+
+        const rematchBtn = row.querySelector('.btn-inline-rematch');
+        if (rematchBtn) {
+          const searchWrap = document.createElement('div');
+          searchWrap.className = 'hidden';
+          searchWrap.style.cssText = 'margin:4px 0 8px;position:relative;max-width:400px;';
+          searchWrap.innerHTML = `
+            <input type="text" class="rematch-search" placeholder="Search formulary by name…"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grey-300);border-radius:6px;font-size:0.8rem;" />
+            <div class="rematch-suggestions" style="border:1px solid var(--grey-300);border-radius:6px;margin-top:2px;max-height:160px;overflow-y:auto;"></div>`;
+          el.insertBefore(searchWrap, resultDiv?.nextSibling || null);
+          rematchBtn.addEventListener('click', () => searchWrap.classList.toggle('hidden'));
+          const searchInput = searchWrap.querySelector('.rematch-search');
+          const suggestBox  = searchWrap.querySelector('.rematch-suggestions');
+          searchInput.addEventListener('input', () => {
+            const matches = searchFormulary(searchInput.value);
+            suggestBox.innerHTML = matches.map(p => `
+              <div class="rematch-option" data-id="${p.id}" data-desc="${(p.description||'').replace(/"/g,'&quot;')}"
+                style="padding:6px 8px;font-size:0.78rem;cursor:pointer;border-bottom:1px solid var(--grey-100);">
+                ${p.description||'—'} <span style="color:var(--grey-600);">(NAPPI ${p.nappiCode||'—'})</span>
+              </div>`).join('');
+            suggestBox.querySelectorAll('.rematch-option').forEach(opt => {
+              opt.addEventListener('click', () => {
+                line._overrideProductId = opt.dataset.id;
+                row.querySelector('.rematch-target').textContent = `Will apply to: ${opt.dataset.desc}`;
+                searchWrap.classList.add('hidden');
+              });
+            });
+          });
         }
       });
     }
     async function approveTrifourPriceLine(line, row) {
       if (!currentTrifourImport) { showToast('No import selected — please click the batch in Import History first.'); return; }
-      const newPrice = parseFloat(row.querySelector('.approve-price').value) || 0;
-      await updateDoc(doc(db,'pharmacy_products', line.matchedProductId), {
-        currentPriceExcl: newPrice, trifourStockCode: line.stockCode, updatedAt: serverTimestamp(),
+      const newPrice     = parseFloat(row.querySelector('.approve-price').value) || 0;
+      const correctedNappi = row.querySelector('.edit-nappi')?.value.trim() || line.nappiCode;
+      const targetProductId = line._overrideProductId || line.matchedProductId;
+      await updateDoc(doc(db,'pharmacy_products', targetProductId), {
+        currentPriceExcl: newPrice, nappiCode: correctedNappi, trifourStockCode: line.stockCode, updatedAt: serverTimestamp(),
       });
       await updateDoc(doc(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines', line.id), {
-        status: 'approved', proposedPriceExcl: newPrice,
+        status: 'approved', proposedPriceExcl: newPrice, nappiCode: correctedNappi,
+        matchedProductId: targetProductId,
         reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
         reviewedAt: serverTimestamp(),
       });
@@ -5460,47 +5508,52 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           : '<span class="variance-badge neutral">No NAP</span>';
         const statusBadge = line.status !== 'pending_review'
           ? `<span class="status-pill ${line.status}">${line.status.replace(/_/g,' ')}</span>` : '';
+        const editable = line.status === 'pending_review';
         row.innerHTML = `
           <div><strong>${line.item}</strong>
-            <button class="btn-inline-check" data-nappi="${line.nappiCode}" style="display:block;background:none;border:none;color:var(--mid-blue);font-size:0.7rem;text-decoration:underline;cursor:pointer;padding:0;margin-top:2px;">Check on SEP registry</button>
+            ${editable ? `<button class="btn-inline-check" style="display:block;background:none;border:none;color:var(--mid-blue);font-size:0.7rem;text-decoration:underline;cursor:pointer;padding:0;margin-top:2px;">Check on SEP registry</button>` : ''}
           </div>
-          <div>${line.nappiCode}</div>
+          <div>${editable ? `<input type="text" class="edit-nappi" value="${line.nappiCode}" style="width:100%;font-family:monospace;" />` : line.nappiCode}</div>
           <div>${line.packSize}</div>
           <div>—</div>
           <div>R${(line.trifourCostPrice||0).toFixed(2)}</div>
           <div>R${(line.nap||0).toFixed(2)}<br>${varBadge}</div>
-          <div>${line.status==='pending_review'
+          <div>${editable
               ? `<input type="number" class="correct-price" value="${line.proposedPriceExcl}" step="0.01" min="0" />`
               : `R${(line.proposedPriceExcl||0).toFixed(2)}`}</div>
-          <div>${line.status==='pending_review'
+          <div>${editable
               ? `<button class="btn-use-item btn-review-newitem">Mark Reviewed</button>`
               : statusBadge}</div>`;
-        if (line.status === 'pending_review') {
+        if (editable) {
           row.querySelector('.btn-review-newitem').addEventListener('click', () => reviewTrifourNewItem(line, row));
         }
         el.appendChild(row);
         const inlineBtn2 = row.querySelector('.btn-inline-check');
-        const resultDiv2 = document.createElement('div');
-        resultDiv2.style.margin = '-4px 0 8px';
-        el.appendChild(resultDiv2);
-        inlineBtn2.addEventListener('click', () => spotcheckDetail(resultDiv2, inlineBtn2.dataset.nappi, line.trifourCostPrice));
+        if (inlineBtn2) {
+          const resultDiv2 = document.createElement('div');
+          resultDiv2.style.margin = '-4px 0 8px';
+          el.appendChild(resultDiv2);
+          inlineBtn2.addEventListener('click', () =>
+            spotcheckDetail(resultDiv2, row.querySelector('.edit-nappi')?.value || line.nappiCode, line.trifourCostPrice));
+        }
       });
     }
     async function reviewTrifourNewItem(line, row) {
       if (!currentTrifourImport) { showToast('No import selected — please click the batch in Import History first.'); return; }
       const correctedPrice = parseFloat(row.querySelector('.correct-price').value) || 0;
+      const correctedNappi = row.querySelector('.edit-nappi')?.value.trim() || line.nappiCode;
       // Product creation happens here, not at import time — pharmacy_products.create is
       // executive-only in the rules, and this action (unlike Upload) is executive-gated.
       const newProdRef = doc(collection(db,'pharmacy_products'));
       await setDoc(newProdRef, {
-        description: line.item, genericName: '', nappiCode: line.nappiCode,
+        description: line.item, genericName: '', nappiCode: correctedNappi,
         tfmCode: '', schedule: '', packSize: line.packSize,
         currentPriceExcl: correctedPrice, trifourStockCode: line.stockCode,
         createdFromTrifourImport: currentTrifourImport.id, createdAt: serverTimestamp(),
       });
       formularyLoaded = false; // force a refresh so the new product is picked up elsewhere
       await updateDoc(doc(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines', line.id), {
-        status: 'reviewed', proposedPriceExcl: correctedPrice, newProductId: newProdRef.id,
+        status: 'reviewed', proposedPriceExcl: correctedPrice, nappiCode: correctedNappi, newProductId: newProdRef.id,
         reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
         reviewedAt: serverTimestamp(),
       });
