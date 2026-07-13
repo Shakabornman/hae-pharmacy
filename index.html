@@ -5496,33 +5496,97 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     });
 
     // ── Formulary NAPPI code data-quality check (read-only) ─────────────
+    let nappiFixCandidates = [];
     document.getElementById('btn-check-nappi-quality')?.addEventListener('click', async () => {
       const btn = document.getElementById('btn-check-nappi-quality');
       const el  = document.getElementById('nappi-quality-result');
       btn.disabled = true; btn.textContent = 'Checking…';
       await loadFormulary();
-      const total = formularyCache.length;
-      const bad   = formularyCache.filter(p => (p.nappiCode || '').length !== 10 && (p.nappiCode || '').length !== 0);
-      const blank = formularyCache.filter(p => !p.nappiCode);
-      const ok    = total - bad.length - blank.length;
+      const total    = formularyCache.length;
+      const blank    = formularyCache.filter(p => !p.nappiCode);
+      const tooShort = formularyCache.filter(p => p.nappiCode && p.nappiCode.length > 0 && p.nappiCode.length < 10);
+      const tooLong  = formularyCache.filter(p => p.nappiCode && p.nappiCode.length > 10);
+      const ok       = total - blank.length - tooShort.length - tooLong.length;
+      nappiFixCandidates = tooShort;
+
       el.innerHTML = `
-        <div class="import-summary-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="import-summary-grid" style="grid-template-columns:repeat(4,1fr);">
           <div class="import-summary-tile"><div class="num">${ok}</div><div class="lbl">10-digit (OK)</div></div>
-          <div class="import-summary-tile"><div class="num" style="color:${bad.length?'var(--red)':'var(--navy)'};">${bad.length}</div><div class="lbl">Wrong Length</div></div>
+          <div class="import-summary-tile"><div class="num" style="color:${tooShort.length?'#7A5000':'var(--navy)'};">${tooShort.length}</div><div class="lbl">Too Short — Fixable</div></div>
+          <div class="import-summary-tile"><div class="num" style="color:${tooLong.length?'var(--red)':'var(--navy)'};">${tooLong.length}</div><div class="lbl">Too Long — Needs Review</div></div>
           <div class="import-summary-tile"><div class="num">${blank.length}</div><div class="lbl">Blank</div></div>
         </div>
-        ${bad.length ? `
-          <p style="font-size:0.78rem;color:var(--grey-600);margin-top:8px;">Sample of affected products (first 15):</p>
-          <div style="max-height:220px;overflow-y:auto;">
-            ${bad.slice(0,15).map(p => `
-              <div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:4px 8px;background:var(--grey-100);border-radius:6px;margin-bottom:4px;">
-                <span>${p.description||'—'}</span>
-                <span style="font-family:monospace;color:var(--red);">"${p.nappiCode}" (${(p.nappiCode||'').length} digits)</span>
-              </div>`).join('')}
-          </div>` : ''}
+
+        ${tooShort.length ? `
+          <div style="margin-top:12px;padding:10px;background:#FFF3CD;border-radius:8px;">
+            <strong style="font-size:0.85rem;">${tooShort.length} products are almost certainly missing leading zeros</strong>
+            <p style="font-size:0.78rem;color:#7A5000;margin:4px 0 8px;">Same bug we found in today's Trifour import — the original bulk import likely read NAPPI codes as numbers instead of text. Safe to auto-restore by re-padding to 10 digits. Nothing will change until you confirm below.</p>
+            <button class="btn-secondary" id="btn-preview-nappi-fix">Preview the Fix</button>
+          </div>
+          <div id="nappi-fix-preview"></div>
+        ` : ''}
+
+        ${tooLong.length ? `
+          <div style="margin-top:12px;">
+            <p style="font-size:0.78rem;color:var(--red);margin-bottom:6px;"><strong>${tooLong.length} products have a NAPPI code longer than 10 digits</strong> — this isn't a padding issue, needs a manual look:</p>
+            <div style="max-height:180px;overflow-y:auto;">
+              ${tooLong.map(p => `
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:4px 8px;background:var(--grey-100);border-radius:6px;margin-bottom:4px;">
+                  <span>${p.description||'—'}</span>
+                  <span style="font-family:monospace;color:var(--red);">"${p.nappiCode}" (${p.nappiCode.length} digits)</span>
+                </div>`).join('')}
+            </div>
+          </div>
+        ` : ''}
       `;
       btn.disabled = false; btn.textContent = 'Run Check';
     });
+
+    document.getElementById('nappi-quality-result')?.addEventListener('click', (e) => {
+      if (e.target?.id === 'btn-preview-nappi-fix') renderNappiFixPreview();
+    });
+
+    function renderNappiFixPreview() {
+      const el = document.getElementById('nappi-fix-preview');
+      el.innerHTML = `
+        <p style="font-size:0.78rem;color:var(--grey-600);margin:10px 0 6px;">Preview — old value → new value (showing all ${nappiFixCandidates.length}):</p>
+        <div style="max-height:280px;overflow-y:auto;margin-bottom:10px;">
+          ${nappiFixCandidates.map(p => `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;padding:4px 8px;background:var(--grey-100);border-radius:6px;margin-bottom:4px;">
+              <span>${p.description||'—'}</span>
+              <span style="font-family:monospace;">
+                <span style="color:var(--red);">"${p.nappiCode}"</span> → <span style="color:var(--green);">"${p.nappiCode.padStart(10,'0')}"</span>
+              </span>
+            </div>`).join('')}
+        </div>
+        <button class="btn-primary" id="btn-apply-nappi-fix">Yes — Apply Fix to ${nappiFixCandidates.length} Products</button>
+      `;
+      document.getElementById('btn-apply-nappi-fix').addEventListener('click', applyNappiFix);
+    }
+
+    async function applyNappiFix() {
+      const btn = document.getElementById('btn-apply-nappi-fix');
+      btn.disabled = true; btn.textContent = 'Applying…';
+      try {
+        const CHUNK = 400;
+        for (let i = 0; i < nappiFixCandidates.length; i += CHUNK) {
+          const chunk = nappiFixCandidates.slice(i, i + CHUNK);
+          const batch = writeBatch(db);
+          chunk.forEach(p => {
+            batch.update(doc(db,'pharmacy_products', p.id), {
+              nappiCode: p.nappiCode.padStart(10,'0'), updatedAt: serverTimestamp(),
+            });
+          });
+          await batch.commit();
+        }
+        formularyLoaded = false;
+        showToast(`Fixed ${nappiFixCandidates.length} NAPPI codes.`);
+        document.getElementById('btn-check-nappi-quality').click();
+      } catch(e) {
+        showToast('Fix failed: ' + e.message);
+        btn.disabled = false; btn.textContent = `Yes — Apply Fix to ${nappiFixCandidates.length} Products`;
+      }
+    }
 
     async function initTrifourPage(user, role) {
       await loadFormulary();
