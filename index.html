@@ -2138,7 +2138,7 @@
     import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { getFirestore, doc, getDoc, collection, addDoc, query,
+    import { getFirestore, doc, getDoc, collection, addDoc, setDoc, query,
              where, orderBy, onSnapshot, serverTimestamp, updateDoc, getDocs, writeBatch }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
@@ -5216,7 +5216,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       btn.disabled = true; btn.textContent = 'Importing…';
       try {
         const fileName  = document.getElementById('trifour-file').files[0]?.name || 'trifour-import.csv';
-        const importRef = await addDoc(collection(db,'pharmacy_trifour_imports'), {
+        const importRef = await addDoc(collection(db,'pharmacy_trifour'), {
           fileName,
           uploadedBy: currentUser.uid, uploadedByName: currentUser.displayName || currentUser.email,
           uploadedAt: serverTimestamp(),
@@ -5226,35 +5226,29 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           unreliableCount: trifourWorkingRows.filter(r=>!r.reliable).length,
         });
 
-        // Chunk writes to stay under Firestore's 500-operations-per-batch limit
-        const CHUNK = 400;
+        // Lines live in a subcollection under the import doc — matches the deployed
+        // Firestore rules (pharmacy_trifour/{id}/lines/{lineId}), not a top-level collection.
+        // Note: new pharmacy_products records are NOT created here. Rules restrict
+        // pharmacy_products creation to the executive tier, and this Upload step is
+        // Finance-accessible — so new-item product creation happens at "Mark Reviewed"
+        // on the New Items tab instead, which is already Executive-only.
+        const linesCol = collection(db, 'pharmacy_trifour', importRef.id, 'lines');
+        const CHUNK = 400; // stay under Firestore's 500-operations-per-batch limit
         for (let i = 0; i < trifourWorkingRows.length; i += CHUNK) {
           const chunk = trifourWorkingRows.slice(i, i + CHUNK);
           const batch = writeBatch(db);
           for (const row of chunk) {
-            let productId = row.matchedProductId;
-            let lineType  = 'price_update';
-            if (!productId) {
-              lineType = 'new_item';
-              const newProdRef = doc(collection(db,'pharmacy_products'));
-              batch.set(newProdRef, {
-                description: row.item, genericName: '', nappiCode: row.nappiCode,
-                tfmCode: '', schedule: '', packSize: row.packSize,
-                currentPriceExcl: row.costPrice, trifourStockCode: row.stockCode,
-                createdFromTrifourImport: importRef.id, createdAt: serverTimestamp(),
-              });
-              productId = newProdRef.id;
-            }
+            const lineType = row.matchedProductId ? 'price_update' : 'new_item';
             const variancePct = row.nap > 0 ? Math.round(((row.costPrice - row.nap)/row.nap)*10000)/100 : null;
-            const lineRef = doc(collection(db,'pharmacy_trifour_lines'));
+            const lineRef = doc(linesCol);
             batch.set(lineRef, {
               importId: importRef.id, lineType,
               item: row.item, nappiCode: row.nappiCode, nappiReliable: row.reliable,
               stockCode: row.stockCode, packSize: row.packSize,
               trifourCostPrice: row.costPrice, nap: row.nap, variancePct,
               varianceFlag: variancePct !== null && Math.abs(variancePct) > TRIFOUR_PRICE_VARIANCE_PCT,
-              matchedProductId: lineType === 'price_update' ? productId : null,
-              newProductId: lineType === 'new_item' ? productId : null,
+              matchedProductId: lineType === 'price_update' ? row.matchedProductId : null,
+              newProductId: null, // set on Mark Reviewed, once the product is actually created
               existingPriceExcl: row.existingPriceExcl,
               proposedPriceExcl: row.costPrice,
               status: 'pending_review',
@@ -5264,7 +5258,6 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           await batch.commit();
         }
 
-        formularyLoaded = false;      // force a refresh so newly created products are picked up
         trifourWorkingRows = [];
         currentTrifourImport = null;  // let the next history snapshot auto-select this new batch
         document.getElementById('trifour-preview').classList.add('hidden');
@@ -5278,7 +5271,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
 
     // ── Import history ───────────────────────────────────────────────
     function subscribeTrifourHistory() {
-      onSnapshot(collection(db,'pharmacy_trifour_imports'), snap => {
+      onSnapshot(collection(db,'pharmacy_trifour'), snap => {
         const docs = snap.docs.map(d => ({ id:d.id, ...d.data() }))
           .sort((a,b) => (b.uploadedAt?.toMillis?.()||0) - (a.uploadedAt?.toMillis?.()||0));
         renderTrifourHistory(docs);
@@ -5314,7 +5307,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     function subscribeTrifourLines(importId) {
       if (trifourLinesUnsub) trifourLinesUnsub();
       trifourLinesUnsub = onSnapshot(
-        query(collection(db,'pharmacy_trifour_lines'), where('importId','==', importId)),
+        collection(db, 'pharmacy_trifour', importId, 'lines'),
         snap => {
           const all = snap.docs.map(d => ({ id:d.id, ...d.data() }));
           const priceLines = all.filter(l => l.lineType === 'price_update');
@@ -5367,7 +5360,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       await updateDoc(doc(db,'pharmacy_products', line.matchedProductId), {
         currentPriceExcl: newPrice, trifourStockCode: line.stockCode, updatedAt: serverTimestamp(),
       });
-      await updateDoc(doc(db,'pharmacy_trifour_lines', line.id), {
+      await updateDoc(doc(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines', line.id), {
         status: 'approved', proposedPriceExcl: newPrice,
         reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
         reviewedAt: serverTimestamp(),
@@ -5375,7 +5368,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       showToast('Price updated.');
     }
     async function rejectTrifourPriceLine(line) {
-      await updateDoc(doc(db,'pharmacy_trifour_lines', line.id), {
+      await updateDoc(doc(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines', line.id), {
         status: 'rejected',
         reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
         reviewedAt: serverTimestamp(),
@@ -5417,17 +5410,22 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     }
     async function reviewTrifourNewItem(line, row) {
       const correctedPrice = parseFloat(row.querySelector('.correct-price').value) || 0;
-      if (line.newProductId) {
-        await updateDoc(doc(db,'pharmacy_products', line.newProductId), {
-          currentPriceExcl: correctedPrice, updatedAt: serverTimestamp(),
-        });
-      }
-      await updateDoc(doc(db,'pharmacy_trifour_lines', line.id), {
-        status: 'reviewed', proposedPriceExcl: correctedPrice,
+      // Product creation happens here, not at import time — pharmacy_products.create is
+      // executive-only in the rules, and this action (unlike Upload) is executive-gated.
+      const newProdRef = doc(collection(db,'pharmacy_products'));
+      await setDoc(newProdRef, {
+        description: line.item, genericName: '', nappiCode: line.nappiCode,
+        tfmCode: '', schedule: '', packSize: line.packSize,
+        currentPriceExcl: correctedPrice, trifourStockCode: line.stockCode,
+        createdFromTrifourImport: currentTrifourImport.id, createdAt: serverTimestamp(),
+      });
+      formularyLoaded = false; // force a refresh so the new product is picked up elsewhere
+      await updateDoc(doc(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines', line.id), {
+        status: 'reviewed', proposedPriceExcl: correctedPrice, newProductId: newProdRef.id,
         reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
         reviewedAt: serverTimestamp(),
       });
-      showToast('Marked reviewed.');
+      showToast('Product created and marked reviewed.');
     }
 
     // ── CSV export (client-side — a functional export, not a formatted workbook) ──
@@ -5449,14 +5447,16 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     }
     document.getElementById('btn-export-prices')?.addEventListener('click', async () => {
       if (!currentTrifourImport) { showToast('Select an import first.'); return; }
-      const snap = await getDocs(query(collection(db,'pharmacy_trifour_lines'),
-        where('importId','==', currentTrifourImport.id), where('lineType','==','price_update')));
+      const snap = await getDocs(query(
+        collection(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines'),
+        where('lineType','==','price_update')));
       exportTrifourLinesCSV(snap.docs.map(d=>d.data()), 'trifour_price_updates');
     });
     document.getElementById('btn-export-newitems')?.addEventListener('click', async () => {
       if (!currentTrifourImport) { showToast('Select an import first.'); return; }
-      const snap = await getDocs(query(collection(db,'pharmacy_trifour_lines'),
-        where('importId','==', currentTrifourImport.id), where('lineType','==','new_item')));
+      const snap = await getDocs(query(
+        collection(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines'),
+        where('lineType','==','new_item')));
       exportTrifourLinesCSV(snap.docs.map(d=>d.data()), 'trifour_new_items');
     });
 
