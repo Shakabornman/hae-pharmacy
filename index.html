@@ -2037,11 +2037,60 @@
         </div>
 
         <div class="page-view" id="page-formulary">
-          <div class="page-header"><h1>Formulary</h1></div>
-          <div class="placeholder-card">
-            <div class="step-badge">Step 3</div>
-            <h2>Product Formulary</h2>
-            <p>The HAE formulary will be available here once Step 3 (Firestore import) is built and confirmed.</p>
+          <div class="page-header">
+            <h1>Formulary</h1>
+            <p>Search the product catalog directly and fix a record right away — don't wait for it to show up in a Trifour import.</p>
+          </div>
+
+          <div id="formulary-list-view">
+            <div class="card">
+              <div class="card-title">Search Products</div>
+              <input type="text" id="formulary-search" class="form-input" placeholder="Type a product name to search (min. 2 characters)…" />
+              <div id="formulary-search-results" style="margin-top:10px;"></div>
+            </div>
+          </div>
+
+          <div id="formulary-detail-view" class="hidden">
+            <div class="detail-back">
+              <button class="btn-secondary" id="btn-formulary-back">← Back to Search</button>
+              <span id="formulary-detail-title" class="detail-title"></span>
+            </div>
+            <div class="card mb-20">
+              <div class="card-title">Product Details</div>
+              <div class="form-row">
+                <label class="form-label">Description <span class="req">*</span></label>
+                <input type="text" id="formulary-description" class="form-input" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Generic Name</label>
+                <input type="text" id="formulary-generic-name" class="form-input" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">NAPPI Code</label>
+                <input type="text" id="formulary-nappi" class="form-input" style="font-family:monospace;" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">TFM Code</label>
+                <input type="text" id="formulary-tfm" class="form-input" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Schedule</label>
+                <input type="text" id="formulary-schedule" class="form-input" placeholder="e.g. S4" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Pack Size</label>
+                <input type="number" id="formulary-pack-size" class="form-input" min="1" step="1" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Current Price Excl</label>
+                <input type="number" id="formulary-price" class="form-input" min="0" step="0.01" />
+              </div>
+              <div id="formulary-meta-readonly" style="font-size:0.78rem;color:var(--grey-600);"></div>
+              <div id="formulary-detail-error" class="form-error hidden"></div>
+              <div class="form-actions">
+                <button class="btn-primary" id="btn-save-formulary">Save Changes</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2292,6 +2341,7 @@
         window._reconcileInitDone = false;
         window._suppliersInitDone = false;
         window._trifourInitDone   = false;
+        window._formularyInitDone = false;
         return;
       }
 
@@ -3185,6 +3235,7 @@ If you cannot read an item clearly, include it with description marked as "[uncl
     window._reconcileInitDone = false;
     window._suppliersInitDone = false;
     window._trifourInitDone   = false;
+    window._formularyInitDone = false;
     function showPageExtended(name) {
       showPage(name);
       if (name === 'requests' && !window._requestsInitDone && currentUser && currentRole) {
@@ -3214,6 +3265,10 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       if (name === 'trifour' && !window._trifourInitDone && currentUser && currentRole) {
         window._trifourInitDone = true;
         initTrifourPage(currentUser, currentRole);
+      }
+      if (name === 'formulary' && !window._formularyInitDone && currentUser && currentRole) {
+        window._formularyInitDone = true;
+        initFormularyPage(currentUser, currentRole);
       }
     }
     // Re-bind nav items to extended showPage
@@ -5148,6 +5203,111 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         });
         showToast('Supplier saved.');
         document.getElementById('btn-supplier-back').click();
+      } catch(e) {
+        errEl.textContent = 'Failed: ' + e.message; errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Save Changes';
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // FORMULARY — search and edit existing products directly
+    // ════════════════════════════════════════════════════════════════
+
+    let currentFormularyProduct = null;
+
+    async function initFormularyPage(user, role) {
+      await loadFormulary();
+    }
+
+    function searchFormularyWide(term) {
+      if (!term || term.length < 2) return [];
+      const t = term.toLowerCase();
+      return formularyCache
+        .filter(p =>
+          (p.description || '').toLowerCase().includes(t) ||
+          (p.genericName || '').toLowerCase().includes(t) ||
+          (p.nappiCode   || '').includes(term)
+        )
+        .slice(0, 30);
+    }
+
+    document.getElementById('formulary-search')?.addEventListener('input', async (e) => {
+      const el = document.getElementById('formulary-search-results');
+      const term = e.target.value.trim();
+      if (term.length < 2) { el.innerHTML = ''; return; }
+      await loadFormulary();
+      const results = searchFormularyWide(term);
+      if (!results.length) { el.innerHTML = '<div class="list-empty">No products match.</div>'; return; }
+      el.innerHTML = results.map(p => `
+        <div class="order-list-item formulary-result" data-id="${p.id}" style="cursor:pointer;">
+          <div style="display:flex;justify-content:space-between;">
+            <strong style="font-size:0.85rem;">${p.description||'—'}</strong>
+            <span style="font-size:0.8rem;color:var(--grey-600);">R${(p.currentPriceExcl||0).toFixed(2)}</span>
+          </div>
+          <div style="font-size:0.78rem;color:var(--grey-600);">NAPPI ${p.nappiCode||'—'} · Pack ${p.packSize||'—'}</div>
+        </div>`).join('');
+      el.querySelectorAll('.formulary-result').forEach(row => {
+        row.addEventListener('click', () => {
+          const product = formularyCache.find(p => p.id === row.dataset.id);
+          if (product) openFormularyDetail(product);
+        });
+      });
+    });
+
+    function openFormularyDetail(product) {
+      currentFormularyProduct = product;
+      document.getElementById('formulary-list-view').classList.add('hidden');
+      document.getElementById('formulary-detail-view').classList.remove('hidden');
+      document.getElementById('formulary-detail-title').textContent = product.description || '—';
+      document.getElementById('formulary-description').value  = product.description  || '';
+      document.getElementById('formulary-generic-name').value = product.genericName  || '';
+      document.getElementById('formulary-nappi').value         = product.nappiCode    || '';
+      document.getElementById('formulary-tfm').value           = product.tfmCode      || '';
+      document.getElementById('formulary-schedule').value      = product.schedule     || '';
+      document.getElementById('formulary-pack-size').value     = product.packSize     || 1;
+      document.getElementById('formulary-price').value         = product.currentPriceExcl || 0;
+      document.getElementById('formulary-detail-error').classList.add('hidden');
+      const readonlyBits = [];
+      if (product.trifourStockCode) readonlyBits.push(`Trifour stock code: ${product.trifourStockCode}`);
+      if (product.createdFromTrifourImport) readonlyBits.push(`Created via Trifour import`);
+      document.getElementById('formulary-meta-readonly').textContent = readonlyBits.join(' · ');
+
+      const canEdit = currentRole === 'finance' || currentRole === 'executive';
+      ['formulary-description','formulary-generic-name','formulary-nappi','formulary-tfm',
+       'formulary-schedule','formulary-pack-size','formulary-price'].forEach(id => {
+        document.getElementById(id).disabled = !canEdit;
+      });
+      document.getElementById('btn-save-formulary').classList.toggle('hidden', !canEdit);
+    }
+    document.getElementById('btn-formulary-back')?.addEventListener('click', () => {
+      document.getElementById('formulary-detail-view').classList.add('hidden');
+      document.getElementById('formulary-list-view').classList.remove('hidden');
+      currentFormularyProduct = null;
+    });
+
+    document.getElementById('btn-save-formulary')?.addEventListener('click', async () => {
+      const btn   = document.getElementById('btn-save-formulary');
+      const errEl = document.getElementById('formulary-detail-error');
+      const description = document.getElementById('formulary-description').value.trim();
+      if (!description) {
+        errEl.textContent = 'Description is required.'; errEl.classList.remove('hidden'); return;
+      }
+      errEl.classList.add('hidden');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        await updateDoc(doc(db,'pharmacy_products', currentFormularyProduct.id), {
+          description,
+          genericName: document.getElementById('formulary-generic-name').value.trim(),
+          nappiCode: document.getElementById('formulary-nappi').value.trim(),
+          tfmCode: document.getElementById('formulary-tfm').value.trim(),
+          schedule: document.getElementById('formulary-schedule').value.trim(),
+          packSize: parseFloat(document.getElementById('formulary-pack-size').value) || 1,
+          currentPriceExcl: parseFloat(document.getElementById('formulary-price').value) || 0,
+          updatedAt: serverTimestamp(),
+        });
+        formularyLoaded = false;
+        showToast('Product saved.');
+        document.getElementById('btn-formulary-back').click();
       } catch(e) {
         errEl.textContent = 'Failed: ' + e.message; errEl.classList.remove('hidden');
       }
