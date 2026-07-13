@@ -5396,7 +5396,9 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         const statusBadge = line.status !== 'pending_review'
           ? `<span class="status-pill ${line.status}">${line.status.replace(/_/g,' ')}</span>` : '';
         row.innerHTML = `
-          <div><strong>${line.item}</strong>${trifourMatchWarning(line)}</div>
+          <div><strong>${line.item}</strong>${trifourMatchWarning(line)}
+            ${!line.nappiReliable ? `<button class="btn-inline-check" data-nappi="${line.nappiCode}" style="background:none;border:none;color:var(--mid-blue);font-size:0.7rem;text-decoration:underline;cursor:pointer;padding:0;margin-top:2px;">Check on SEP registry</button>` : ''}
+          </div>
           <div>${line.nappiCode}</div>
           <div>${line.packSize}</div>
           <div>R${(line.existingPriceExcl||0).toFixed(2)}</div>
@@ -5413,6 +5415,13 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           row.querySelector('.btn-reject-price').addEventListener('click', () => rejectTrifourPriceLine(line));
         }
         el.appendChild(row);
+        const inlineBtn = row.querySelector('.btn-inline-check');
+        if (inlineBtn) {
+          const resultDiv = document.createElement('div');
+          resultDiv.style.margin = '-4px 0 8px';
+          el.appendChild(resultDiv);
+          inlineBtn.addEventListener('click', () => spotcheckDetail(resultDiv, inlineBtn.dataset.nappi, line.trifourCostPrice));
+        }
       });
     }
     async function approveTrifourPriceLine(line, row) {
@@ -5452,7 +5461,9 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         const statusBadge = line.status !== 'pending_review'
           ? `<span class="status-pill ${line.status}">${line.status.replace(/_/g,' ')}</span>` : '';
         row.innerHTML = `
-          <div><strong>${line.item}</strong></div>
+          <div><strong>${line.item}</strong>
+            <button class="btn-inline-check" data-nappi="${line.nappiCode}" style="display:block;background:none;border:none;color:var(--mid-blue);font-size:0.7rem;text-decoration:underline;cursor:pointer;padding:0;margin-top:2px;">Check on SEP registry</button>
+          </div>
           <div>${line.nappiCode}</div>
           <div>${line.packSize}</div>
           <div>—</div>
@@ -5468,6 +5479,11 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           row.querySelector('.btn-review-newitem').addEventListener('click', () => reviewTrifourNewItem(line, row));
         }
         el.appendChild(row);
+        const inlineBtn2 = row.querySelector('.btn-inline-check');
+        const resultDiv2 = document.createElement('div');
+        resultDiv2.style.margin = '-4px 0 8px';
+        el.appendChild(resultDiv2);
+        inlineBtn2.addEventListener('click', () => spotcheckDetail(resultDiv2, inlineBtn2.dataset.nappi, line.trifourCostPrice));
       });
     }
     async function reviewTrifourNewItem(line, row) {
@@ -5524,75 +5540,86 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     });
 
     // ── NAPPI / SEP spot check — direct browser call to medicineprices.org.za ──
-    // Experimental/proof-of-concept: no proxy, no Firebase writes. If this fails
-    // with a network/CORS error, that tells us we'd need a Cloud Function proxy
-    // (same pattern as the existing AI Cloudflare Worker) to use this for real.
+    // Confirmed working (no CORS/proxy issue). Render functions take a target
+    // element so the same logic can populate either the standalone card or an
+    // inline check on a review row.
     const SPOTCHECK_BASE = 'https://medicineprices.org.za/api/v2';
 
-    function renderSpotcheckError(err) {
-      const el = document.getElementById('spotcheck-result');
+    function renderSpotcheckError(el, err) {
       el.innerHTML = `
-        <div style="margin-top:10px;padding:10px;background:#FFF0F0;border-radius:8px;font-size:0.8rem;color:var(--red);">
-          Request failed: ${err.message}.<br>
-          If this is a CORS/network error, the browser is blocking the direct call —
-          that would mean this needs to go through a Cloud Function proxy to actually work,
-          same pattern as the existing AI proxy.
+        <div style="margin-top:6px;padding:8px;background:#FFF0F0;border-radius:8px;font-size:0.78rem;color:var(--red);">
+          Request failed: ${err.message}.
         </div>`;
     }
-
-    function renderSpotcheckSearchResults(results) {
-      const el = document.getElementById('spotcheck-result');
+    function renderSpotcheckSearchResults(el, results) {
       if (!Array.isArray(results) || !results.length) {
-        el.innerHTML = '<div class="list-empty" style="margin-top:10px;">No results — this may mean the item genuinely isn\'t in the medicines price database (e.g. a consumable/appliance, not a scheduled medicine).</div>';
+        el.innerHTML = '<div class="list-empty" style="margin-top:6px;font-size:0.78rem;">No results — likely not in the medicines database (consumable/appliance, not a scheduled medicine).</div>';
         return;
       }
-      el.innerHTML = `<div style="margin-top:10px;max-height:280px;overflow-y:auto;">
+      el.innerHTML = `<div style="margin-top:6px;max-height:220px;overflow-y:auto;">
         ${results.slice(0,20).map(r => `
-          <div style="padding:8px;background:var(--grey-100);border-radius:6px;margin-bottom:4px;font-size:0.8rem;">
+          <div style="padding:6px 8px;background:var(--grey-100);border-radius:6px;margin-bottom:4px;font-size:0.78rem;">
             <strong>${r.name||'—'}</strong> <span style="color:var(--grey-600);">(${r.dosage_form||'—'})</span><br>
             NAPPI ${r.nappi_code||'—'} · SEP ${r.sep||'—'} · ${r.number_of_generics||0} generic(s)
           </div>`).join('')}
       </div>`;
     }
-
-    function renderSpotcheckDetail(d) {
-      const el = document.getElementById('spotcheck-result');
+    function parseRand(str) {
+      const n = parseFloat(String(str||'').replace(/[^0-9.]/g,''));
+      return isNaN(n) ? null : n;
+    }
+    function renderSpotcheckDetail(el, d, compareCostPrice) {
       if (!d || !d.nappi_code) {
-        el.innerHTML = '<div class="list-empty" style="margin-top:10px;">Not found — this NAPPI code isn\'t in the medicines price database. Could mean it\'s a consumable/appliance rather than a scheduled medicine, or the code itself is wrong.</div>';
+        el.innerHTML = '<div class="list-empty" style="margin-top:6px;font-size:0.78rem;">Not found — not in the medicines database. Likely a consumable/appliance, not a scheduled medicine (or the code is wrong).</div>';
         return;
       }
       const ingredients = (d.ingredients||[]).map(i => `${i.name} ${i.strength||''}${i.unit||''}`).join(', ');
-      el.innerHTML = `<div style="margin-top:10px;padding:10px;background:var(--grey-100);border-radius:8px;font-size:0.8rem;">
+      const costPerUnit = parseRand(d.cost_per_unit);
+      let comparisonLine = '';
+      if (compareCostPrice != null && costPerUnit != null && costPerUnit > 0) {
+        const diffPct = ((compareCostPrice - costPerUnit) / costPerUnit) * 100;
+        const flagged = Math.abs(diffPct) > 10;
+        comparisonLine = `
+          <div style="margin-top:4px;padding:4px 6px;background:${flagged?'#FFF0F0':'#E8F5E9'};border-radius:4px;">
+            Trifour cost R${compareCostPrice.toFixed(2)} vs regulated ceiling R${costPerUnit.toFixed(2)}/unit
+            → <strong>${diffPct>0?'+':''}${diffPct.toFixed(1)}%</strong>${flagged?' — worth a closer look':''}
+          </div>`;
+      }
+      el.innerHTML = `<div style="margin-top:6px;padding:8px;background:var(--grey-100);border-radius:8px;font-size:0.78rem;">
         <strong>${d.name||'—'}</strong><br>
         NAPPI ${d.nappi_code} · Schedule ${d.schedule||'—'} · ${d.dosage_form||'—'} · Pack ${d.pack_size||'—'}<br>
-        SEP ${d.sep||'—'} · Cost/unit ${d.cost_per_unit||'—'} · Dispensing fee ${d.dispensing_fee||'—'}<br>
+        <strong>Regulated ceiling: R${costPerUnit!=null?costPerUnit.toFixed(2):'—'}/unit</strong>
+        <span style="color:var(--grey-600);">(this is the figure comparable to Trifour's Cost Price — both exclude dispensing fee)</span><br>
+        <span style="color:var(--grey-600);">Full pack SEP: ${d.sep||'—'} · Dispensing fee (separate, not an acquisition cost): ${d.dispensing_fee||'—'}</span><br>
+        ${comparisonLine}
         ${ingredients ? `Ingredients: ${ingredients}<br>` : ''}
         ${d.is_generic ? `${d.is_generic} · ${d.number_of_generics||0} generic(s) available` : ''}
       </div>`;
     }
+    async function spotcheckSearch(el, query) {
+      el.innerHTML = '<div class="list-loading" style="font-size:0.78rem;">Searching…</div>';
+      try {
+        const resp = await fetch(`${SPOTCHECK_BASE}/search-lite?q=${encodeURIComponent(query)}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        renderSpotcheckSearchResults(el, await resp.json());
+      } catch(e) { renderSpotcheckError(el, e); }
+    }
+    async function spotcheckDetail(el, nappi, compareCostPrice) {
+      el.innerHTML = '<div class="list-loading" style="font-size:0.78rem;">Looking up…</div>';
+      try {
+        const resp = await fetch(`${SPOTCHECK_BASE}/detail?nappi=${encodeURIComponent(nappi)}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        renderSpotcheckDetail(el, await resp.json(), compareCostPrice);
+      } catch(e) { renderSpotcheckError(el, e); }
+    }
 
-    document.getElementById('btn-spotcheck-search')?.addEventListener('click', async () => {
+    document.getElementById('btn-spotcheck-search')?.addEventListener('click', () => {
       const q = document.getElementById('spotcheck-query').value.trim();
-      if (!q) return;
-      const el = document.getElementById('spotcheck-result');
-      el.innerHTML = '<div class="list-loading">Searching…</div>';
-      try {
-        const resp = await fetch(`${SPOTCHECK_BASE}/search-lite?q=${encodeURIComponent(q)}`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        renderSpotcheckSearchResults(await resp.json());
-      } catch(e) { renderSpotcheckError(e); }
+      if (q) spotcheckSearch(document.getElementById('spotcheck-result'), q);
     });
-
-    document.getElementById('btn-spotcheck-detail')?.addEventListener('click', async () => {
+    document.getElementById('btn-spotcheck-detail')?.addEventListener('click', () => {
       const n = document.getElementById('spotcheck-nappi').value.trim();
-      if (!n) return;
-      const el = document.getElementById('spotcheck-result');
-      el.innerHTML = '<div class="list-loading">Looking up…</div>';
-      try {
-        const resp = await fetch(`${SPOTCHECK_BASE}/detail?nappi=${encodeURIComponent(n)}`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        renderSpotcheckDetail(await resp.json());
-      } catch(e) { renderSpotcheckError(e); }
+      if (n) spotcheckDetail(document.getElementById('spotcheck-result'), n);
     });
 
     // ── Formulary NAPPI code data-quality check (read-only) ─────────────
