@@ -1228,6 +1228,50 @@
       width: 100%; padding: 6px 8px; border: 1px solid var(--grey-300);
       border-radius: 6px; font-size: 0.8rem;
     }
+    /* ── Trifour Import (Step 8) ────────────────────────────────────────── */
+    .status-pill.pending-review { background: #EAF0FB; color: var(--mid-blue); }
+    .status-pill.approved       { background: #E8F5E9; color: var(--green); }
+    .status-pill.rejected       { background: #FFF0F0; color: var(--red); }
+    .status-pill.reviewed       { background: #E8F5E9; color: var(--green); }
+    .tab-row { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid var(--grey-100); }
+    .tab-btn {
+      padding: 8px 16px; font-size: 0.85rem; font-weight: 600; color: var(--grey-600);
+      background: none; border: none; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; cursor: pointer;
+    }
+    .tab-btn.active { color: var(--mid-blue); border-bottom-color: var(--mid-blue); }
+    .tab-btn:disabled { color: var(--grey-300); cursor: not-allowed; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .trifour-line-row {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr 80px 90px 90px 90px 90px 100px;
+      gap: 6px; align-items: center; padding: 10px 8px; margin-bottom: 6px;
+      background: var(--grey-100); border-radius: var(--radius); font-size: 0.8rem;
+    }
+    .trifour-line-head {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr 80px 90px 90px 90px 90px 100px;
+      gap: 6px; padding: 0 8px 4px; font-size: 0.68rem; font-weight: 700;
+      color: var(--grey-600); text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .trifour-line-row input {
+      width: 100%; padding: 6px 8px; border: 1px solid var(--grey-300);
+      border-radius: 6px; font-size: 0.8rem;
+    }
+    .import-batch-card {
+      padding: 12px 14px; margin-bottom: 8px; background: var(--grey-100);
+      border-radius: var(--radius); cursor: pointer;
+    }
+    .import-batch-card:hover { background: #EAF0FB; }
+    .import-summary-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0;
+    }
+    .import-summary-tile {
+      padding: 12px; background: var(--grey-100); border-radius: var(--radius); text-align: center;
+    }
+    .import-summary-tile .num { font-size: 1.4rem; font-weight: 700; color: var(--navy); }
+    .import-summary-tile .lbl { font-size: 0.72rem; color: var(--grey-600); text-transform: uppercase; letter-spacing: 0.03em; }
     .nav-rejected-badge {
       margin-left: auto; background: var(--red); color: var(--white);
       font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 10px;
@@ -2002,12 +2046,86 @@
         </div>
 
         <div class="page-view" id="page-trifour">
-          <div class="page-header"><h1>Trifour Import</h1></div>
-          <div class="placeholder-card">
-            <div class="step-badge">Step 8</div>
-            <h2>Weekly Price Comparison</h2>
-            <p>Trifour CSV import and price mismatch flagging will be available here once Step 8 is built and confirmed.</p>
+          <div class="page-header">
+            <h1>Trifour Import</h1>
+            <p>Upload the weekly Trifour stock list to compare prices against the formulary and pick up new items.</p>
           </div>
+
+          <div class="tab-row">
+            <button class="tab-btn active" data-tab="trifour-upload">Upload</button>
+            <button class="tab-btn" data-tab="trifour-prices" id="tab-btn-prices">Price Updates <span id="tab-badge-prices"></span></button>
+            <button class="tab-btn" data-tab="trifour-newitems" id="tab-btn-newitems">New Items <span id="tab-badge-newitems"></span></button>
+          </div>
+
+          <!-- ── Upload tab ───────────────────────────────────────────────── -->
+          <div class="tab-panel active" id="tab-trifour-upload">
+            <div class="card mb-20">
+              <div class="card-title">Upload Stock List</div>
+              <div class="form-row">
+                <label class="form-label">Trifour CSV file</label>
+                <input type="file" id="trifour-file" class="form-input" accept=".csv,text/csv" />
+              </div>
+              <div id="trifour-upload-error" class="form-error hidden"></div>
+              <div class="form-actions">
+                <button class="btn-primary" id="btn-parse-trifour">Parse &amp; Preview</button>
+              </div>
+
+              <div id="trifour-preview" class="hidden" style="margin-top:16px;">
+                <div class="import-summary-grid">
+                  <div class="import-summary-tile"><div class="num" id="prev-total">0</div><div class="lbl">Rows Parsed</div></div>
+                  <div class="import-summary-tile"><div class="num" id="prev-skipped">0</div><div class="lbl">Zero Stock Skipped</div></div>
+                  <div class="import-summary-tile"><div class="num" id="prev-matched">0</div><div class="lbl">Matched (Price Update)</div></div>
+                  <div class="import-summary-tile"><div class="num" id="prev-new">0</div><div class="lbl">New Items</div></div>
+                </div>
+                <p style="font-size:0.8rem;color:var(--grey-600);">
+                  <span id="prev-unreliable">0</span> row(s) matched via fallback (unreliable NAPPI code) — will need a closer look in the review tabs.
+                </p>
+                <div class="form-actions">
+                  <button class="btn-primary" id="btn-confirm-trifour-import">Confirm Import</button>
+                  <button class="btn-secondary" id="btn-cancel-trifour-import">Cancel</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Import History</div>
+              <div id="trifour-import-history"><div class="list-loading">Loading…</div></div>
+            </div>
+          </div>
+
+          <!-- ── Price Updates tab (Executive only) ──────────────────────── -->
+          <div class="tab-panel" id="tab-trifour-prices">
+            <div class="card">
+              <div class="card-title-row">
+                <div class="card-title">Pending Price Updates</div>
+                <button class="btn-secondary" id="btn-export-prices">⬇ Download Export</button>
+              </div>
+              <div class="trifour-line-head">
+                <div>Item</div><div>NAPPI</div><div>Pack</div><div>Existing</div>
+                <div>Trifour Cost</div><div>NAP / Variance</div><div>Approve At</div><div></div>
+              </div>
+              <div id="trifour-prices-list"><div class="list-loading">Select an import to review.</div></div>
+            </div>
+          </div>
+
+          <!-- ── New Items tab (Executive only) ──────────────────────────── -->
+          <div class="tab-panel" id="tab-trifour-newitems">
+            <div class="card">
+              <div class="card-title-row">
+                <div class="card-title">New Items — Pricing Warning</div>
+                <button class="btn-secondary" id="btn-export-newitems">⬇ Download Export</button>
+              </div>
+              <p style="font-size:0.8rem;color:var(--grey-600);margin-bottom:10px;">
+                These products were auto-created because no match was found in the formulary. Check the price before marking reviewed — there is no separate formulary edit screen yet, so this is the only place to correct them right now.
+              </p>
+              <div class="trifour-line-head">
+                <div>Item</div><div>NAPPI</div><div>Pack</div><div>—</div>
+                <div>Cost Price</div><div>NAP / Variance</div><div>Correct Price</div><div></div>
+              </div>
+              <div id="trifour-newitems-list"><div class="list-loading">Select an import to review.</div></div>
+            </div>
+          </div>
+
         </div>
 
       </main>
@@ -2021,7 +2139,7 @@
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     import { getFirestore, doc, getDoc, collection, addDoc, query,
-             where, orderBy, onSnapshot, serverTimestamp, updateDoc, getDocs }
+             where, orderBy, onSnapshot, serverTimestamp, updateDoc, getDocs, writeBatch }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -2104,6 +2222,7 @@
         window._invoicesInitDone  = false;
         window._reconcileInitDone = false;
         window._suppliersInitDone = false;
+        window._trifourInitDone   = false;
         return;
       }
 
@@ -2996,6 +3115,7 @@ If you cannot read an item clearly, include it with description marked as "[uncl
     window._invoicesInitDone  = false;
     window._reconcileInitDone = false;
     window._suppliersInitDone = false;
+    window._trifourInitDone   = false;
     function showPageExtended(name) {
       showPage(name);
       if (name === 'requests' && !window._requestsInitDone && currentUser && currentRole) {
@@ -3021,6 +3141,10 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       if (name === 'suppliers' && !window._suppliersInitDone && currentUser && currentRole) {
         window._suppliersInitDone = true;
         initSuppliersPage(currentUser, currentRole);
+      }
+      if (name === 'trifour' && !window._trifourInitDone && currentUser && currentRole) {
+        window._trifourInitDone = true;
+        initTrifourPage(currentUser, currentRole);
       }
     }
     // Re-bind nav items to extended showPage
@@ -4960,6 +5084,392 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       }
       btn.disabled = false; btn.textContent = 'Save Changes';
     });
+
+    // ════════════════════════════════════════════════════════════════
+    // STEP 8 — TRIFOUR IMPORT (Finance upload, Executive review)
+    // ════════════════════════════════════════════════════════════════
+
+    const TRIFOUR_PRICE_VARIANCE_PCT = 10;
+    const TRIFOUR_PLACEHOLDER_NAPPI  = new Set(['9999999999','0555522003','0709172001']);
+
+    let trifourWorkingRows   = [];  // parsed+matched rows awaiting confirm (client-side only)
+    let currentTrifourImport = null;
+    let trifourLinesUnsub    = null;
+
+    // ── Tab switching ────────────────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
+      });
+    });
+
+    // ── CSV parsing ──────────────────────────────────────────────────
+    // Trifour's export has a trailing comma on every data row that the header row lacks,
+    // which silently shifts every column left if parsed naively — split on the header's
+    // known column count and drop the resulting phantom trailing field.
+    function parseCsvLine(line) {
+      const out = [];
+      let cur = '', inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuotes = !inQuotes; continue; }
+        if (ch === ',' && !inQuotes) { out.push(cur); cur = ''; continue; }
+        cur += ch;
+      }
+      out.push(cur);
+      return out;
+    }
+    function parseTrifourCSV(text) {
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (!lines.length) return [];
+      const headerCount = parseCsvLine(lines[0]).length;
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const fields = parseCsvLine(lines[i]).slice(0, headerCount);
+        if (fields.length < 9) continue;
+        const [item, supplier, stockCode, nappiCode, location, packSize, costPrice, nap, stockOnHand] = fields;
+        rows.push({
+          item: (item||'').trim(),
+          supplier: (supplier||'').trim(),
+          stockCode: (stockCode||'').trim(),
+          nappiCode: (nappiCode||'').trim().padStart(10,'0'),
+          location: (location||'').trim(),
+          packSize: parseFloat(packSize) || 1,
+          costPrice: parseFloat(costPrice) || 0,
+          nap: parseFloat(nap) || 0,
+          stockOnHand: parseFloat(stockOnHand) || 0,
+        });
+      }
+      return rows;
+    }
+
+    // ── Dedup — the same product appears once per bin location in the export ──
+    function dedupTrifourRows(rows) {
+      const map = new Map();
+      rows.forEach(r => {
+        const key = TRIFOUR_PLACEHOLDER_NAPPI.has(r.nappiCode)
+          ? 'desc:' + r.item.toLowerCase()
+          : 'nappi:' + r.nappiCode;
+        if (!map.has(key)) map.set(key, { ...r, totalStockOnHand: r.stockOnHand });
+        else map.get(key).totalStockOnHand += r.stockOnHand;
+      });
+      return Array.from(map.values());
+    }
+
+    // ── Matching against the formulary ──────────────────────────────────
+    function matchTrifourRow(row) {
+      if (!TRIFOUR_PLACEHOLDER_NAPPI.has(row.nappiCode)) {
+        const byNappi = formularyCache.find(p => p.nappiCode === row.nappiCode);
+        if (byNappi) return { product: byNappi, matchedVia: 'nappi', reliable: true };
+      }
+      const byStock = formularyCache.find(p => p.trifourStockCode && p.trifourStockCode === row.stockCode);
+      if (byStock) return { product: byStock, matchedVia: 'stockCode', reliable: false };
+      const firstWord = row.item.toLowerCase().split(' ')[0];
+      const byDesc = firstWord ? formularyCache.find(p => (p.description||'').toLowerCase().includes(firstWord)) : null;
+      if (byDesc) return { product: byDesc, matchedVia: 'description', reliable: false };
+      return { product: null, matchedVia: null, reliable: !TRIFOUR_PLACEHOLDER_NAPPI.has(row.nappiCode) };
+    }
+
+    document.getElementById('btn-parse-trifour')?.addEventListener('click', async () => {
+      const errEl = document.getElementById('trifour-upload-error');
+      const file  = document.getElementById('trifour-file').files[0];
+      if (!file) { errEl.textContent = 'Please choose a CSV file.'; errEl.classList.remove('hidden'); return; }
+      errEl.classList.add('hidden');
+      await loadFormulary();
+      const text     = await file.text();
+      const raw      = parseTrifourCSV(text);
+      const nonZero  = raw.filter(r => r.stockOnHand !== 0);
+      const skipped  = raw.length - nonZero.length;
+      const deduped  = dedupTrifourRows(nonZero);
+
+      let matchedCount = 0, newCount = 0, unreliableCount = 0;
+      trifourWorkingRows = deduped.map(row => {
+        const m = matchTrifourRow(row);
+        if (m.product) matchedCount++; else newCount++;
+        if (!m.reliable) unreliableCount++;
+        return {
+          ...row, matchedProductId: m.product?.id || null, matchedVia: m.matchedVia,
+          reliable: m.reliable, existingPriceExcl: m.product?.currentPriceExcl ?? null,
+        };
+      });
+
+      document.getElementById('prev-total').textContent      = raw.length;
+      document.getElementById('prev-skipped').textContent    = skipped;
+      document.getElementById('prev-matched').textContent    = matchedCount;
+      document.getElementById('prev-new').textContent        = newCount;
+      document.getElementById('prev-unreliable').textContent = unreliableCount;
+      document.getElementById('trifour-preview').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-cancel-trifour-import')?.addEventListener('click', () => {
+      trifourWorkingRows = [];
+      document.getElementById('trifour-preview').classList.add('hidden');
+      document.getElementById('trifour-file').value = '';
+    });
+
+    document.getElementById('btn-confirm-trifour-import')?.addEventListener('click', async () => {
+      const btn   = document.getElementById('btn-confirm-trifour-import');
+      const errEl = document.getElementById('trifour-upload-error');
+      btn.disabled = true; btn.textContent = 'Importing…';
+      try {
+        const fileName  = document.getElementById('trifour-file').files[0]?.name || 'trifour-import.csv';
+        const importRef = await addDoc(collection(db,'pharmacy_trifour_imports'), {
+          fileName,
+          uploadedBy: currentUser.uid, uploadedByName: currentUser.displayName || currentUser.email,
+          uploadedAt: serverTimestamp(),
+          totalRows: trifourWorkingRows.length,
+          matchedCount: trifourWorkingRows.filter(r=>r.matchedProductId).length,
+          newItemCount: trifourWorkingRows.filter(r=>!r.matchedProductId).length,
+          unreliableCount: trifourWorkingRows.filter(r=>!r.reliable).length,
+        });
+
+        // Chunk writes to stay under Firestore's 500-operations-per-batch limit
+        const CHUNK = 400;
+        for (let i = 0; i < trifourWorkingRows.length; i += CHUNK) {
+          const chunk = trifourWorkingRows.slice(i, i + CHUNK);
+          const batch = writeBatch(db);
+          for (const row of chunk) {
+            let productId = row.matchedProductId;
+            let lineType  = 'price_update';
+            if (!productId) {
+              lineType = 'new_item';
+              const newProdRef = doc(collection(db,'pharmacy_products'));
+              batch.set(newProdRef, {
+                description: row.item, genericName: '', nappiCode: row.nappiCode,
+                tfmCode: '', schedule: '', packSize: row.packSize,
+                currentPriceExcl: row.costPrice, trifourStockCode: row.stockCode,
+                createdFromTrifourImport: importRef.id, createdAt: serverTimestamp(),
+              });
+              productId = newProdRef.id;
+            }
+            const variancePct = row.nap > 0 ? Math.round(((row.costPrice - row.nap)/row.nap)*10000)/100 : null;
+            const lineRef = doc(collection(db,'pharmacy_trifour_lines'));
+            batch.set(lineRef, {
+              importId: importRef.id, lineType,
+              item: row.item, nappiCode: row.nappiCode, nappiReliable: row.reliable,
+              stockCode: row.stockCode, packSize: row.packSize,
+              trifourCostPrice: row.costPrice, nap: row.nap, variancePct,
+              varianceFlag: variancePct !== null && Math.abs(variancePct) > TRIFOUR_PRICE_VARIANCE_PCT,
+              matchedProductId: lineType === 'price_update' ? productId : null,
+              newProductId: lineType === 'new_item' ? productId : null,
+              existingPriceExcl: row.existingPriceExcl,
+              proposedPriceExcl: row.costPrice,
+              status: 'pending_review',
+              createdAt: serverTimestamp(),
+            });
+          }
+          await batch.commit();
+        }
+
+        formularyLoaded = false;      // force a refresh so newly created products are picked up
+        trifourWorkingRows = [];
+        currentTrifourImport = null;  // let the next history snapshot auto-select this new batch
+        document.getElementById('trifour-preview').classList.add('hidden');
+        document.getElementById('trifour-file').value = '';
+        showToast('Import complete — review staged in Price Updates / New Items.');
+      } catch(e) {
+        errEl.textContent = 'Import failed: ' + e.message; errEl.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = 'Confirm Import';
+    });
+
+    // ── Import history ───────────────────────────────────────────────
+    function subscribeTrifourHistory() {
+      onSnapshot(collection(db,'pharmacy_trifour_imports'), snap => {
+        const docs = snap.docs.map(d => ({ id:d.id, ...d.data() }))
+          .sort((a,b) => (b.uploadedAt?.toMillis?.()||0) - (a.uploadedAt?.toMillis?.()||0));
+        renderTrifourHistory(docs);
+        if (!currentTrifourImport && docs.length) selectTrifourImport(docs[0]);
+      });
+    }
+    function renderTrifourHistory(docs) {
+      const el = document.getElementById('trifour-import-history');
+      if (!docs.length) { el.innerHTML = '<div class="list-empty">No imports yet.</div>'; return; }
+      el.innerHTML = '';
+      docs.forEach(imp => {
+        const div = document.createElement('div');
+        div.className = 'import-batch-card';
+        const date = imp.uploadedAt?.toDate ? imp.uploadedAt.toDate().toLocaleString('en-ZA') : '—';
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong style="font-size:0.88rem;">${imp.fileName||'—'}</strong>
+              <span style="font-size:0.78rem;color:var(--grey-600);margin-left:8px;">${date}</span>
+            </div>
+            <span style="font-size:0.8rem;color:var(--grey-600);">
+              ${imp.totalRows||0} rows · ${imp.matchedCount||0} price updates · ${imp.newItemCount||0} new
+            </span>
+          </div>`;
+        div.addEventListener('click', () => selectTrifourImport(imp));
+        el.appendChild(div);
+      });
+    }
+    function selectTrifourImport(imp) {
+      currentTrifourImport = imp;
+      subscribeTrifourLines(imp.id);
+    }
+    function subscribeTrifourLines(importId) {
+      if (trifourLinesUnsub) trifourLinesUnsub();
+      trifourLinesUnsub = onSnapshot(
+        query(collection(db,'pharmacy_trifour_lines'), where('importId','==', importId)),
+        snap => {
+          const all = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+          const priceLines = all.filter(l => l.lineType === 'price_update');
+          const newLines   = all.filter(l => l.lineType === 'new_item');
+          const pendingPrice = priceLines.filter(l=>l.status==='pending_review').length;
+          const pendingNew   = newLines.filter(l=>l.status==='pending_review').length;
+          document.getElementById('tab-badge-prices').textContent   = pendingPrice ? `(${pendingPrice})` : '';
+          document.getElementById('tab-badge-newitems').textContent = pendingNew   ? `(${pendingNew})`   : '';
+          renderTrifourPriceLines(priceLines);
+          renderTrifourNewItemLines(newLines);
+        }
+      );
+    }
+
+    // ── Price Updates tab ────────────────────────────────────────────
+    function renderTrifourPriceLines(lines) {
+      const el = document.getElementById('trifour-prices-list');
+      if (!lines.length) { el.innerHTML = '<div class="list-empty">No price update lines for this import.</div>'; return; }
+      el.innerHTML = '';
+      lines.forEach(line => {
+        const row = document.createElement('div');
+        row.className = 'trifour-line-row';
+        const varBadge = line.nap > 0
+          ? `<span class="variance-badge ${line.varianceFlag?'flagged':'ok'}">${line.variancePct>0?'+':''}${line.variancePct}%</span>`
+          : '<span class="variance-badge neutral">No NAP</span>';
+        const statusBadge = line.status !== 'pending_review'
+          ? `<span class="status-pill ${line.status}">${line.status.replace(/_/g,' ')}</span>` : '';
+        row.innerHTML = `
+          <div><strong>${line.item}</strong>${!line.nappiReliable?'<div style="font-size:0.68rem;color:var(--red);">unreliable NAPPI match</div>':''}</div>
+          <div>${line.nappiCode}</div>
+          <div>${line.packSize}</div>
+          <div>R${(line.existingPriceExcl||0).toFixed(2)}</div>
+          <div>R${(line.trifourCostPrice||0).toFixed(2)}</div>
+          <div>R${(line.nap||0).toFixed(2)}<br>${varBadge}</div>
+          <div>${line.status==='pending_review'
+              ? `<input type="number" class="approve-price" value="${line.proposedPriceExcl}" step="0.01" min="0" />`
+              : `R${(line.proposedPriceExcl||0).toFixed(2)}`}</div>
+          <div>${line.status==='pending_review'
+              ? `<button class="btn-use-item btn-approve-price">Approve</button><button class="btn-remove-line btn-reject-price" title="Reject">×</button>`
+              : statusBadge}</div>`;
+        if (line.status === 'pending_review') {
+          row.querySelector('.btn-approve-price').addEventListener('click', () => approveTrifourPriceLine(line, row));
+          row.querySelector('.btn-reject-price').addEventListener('click', () => rejectTrifourPriceLine(line));
+        }
+        el.appendChild(row);
+      });
+    }
+    async function approveTrifourPriceLine(line, row) {
+      const newPrice = parseFloat(row.querySelector('.approve-price').value) || 0;
+      await updateDoc(doc(db,'pharmacy_products', line.matchedProductId), {
+        currentPriceExcl: newPrice, trifourStockCode: line.stockCode, updatedAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db,'pharmacy_trifour_lines', line.id), {
+        status: 'approved', proposedPriceExcl: newPrice,
+        reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
+        reviewedAt: serverTimestamp(),
+      });
+      showToast('Price updated.');
+    }
+    async function rejectTrifourPriceLine(line) {
+      await updateDoc(doc(db,'pharmacy_trifour_lines', line.id), {
+        status: 'rejected',
+        reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
+        reviewedAt: serverTimestamp(),
+      });
+      showToast('Price update rejected.');
+    }
+
+    // ── New Items tab ─────────────────────────────────────────────────
+    function renderTrifourNewItemLines(lines) {
+      const el = document.getElementById('trifour-newitems-list');
+      if (!lines.length) { el.innerHTML = '<div class="list-empty">No new items for this import.</div>'; return; }
+      el.innerHTML = '';
+      lines.forEach(line => {
+        const row = document.createElement('div');
+        row.className = 'trifour-line-row';
+        const varBadge = line.nap > 0
+          ? `<span class="variance-badge ${line.varianceFlag?'flagged':'ok'}">${line.variancePct>0?'+':''}${line.variancePct}%</span>`
+          : '<span class="variance-badge neutral">No NAP</span>';
+        const statusBadge = line.status !== 'pending_review'
+          ? `<span class="status-pill ${line.status}">${line.status.replace(/_/g,' ')}</span>` : '';
+        row.innerHTML = `
+          <div><strong>${line.item}</strong></div>
+          <div>${line.nappiCode}</div>
+          <div>${line.packSize}</div>
+          <div>—</div>
+          <div>R${(line.trifourCostPrice||0).toFixed(2)}</div>
+          <div>R${(line.nap||0).toFixed(2)}<br>${varBadge}</div>
+          <div>${line.status==='pending_review'
+              ? `<input type="number" class="correct-price" value="${line.proposedPriceExcl}" step="0.01" min="0" />`
+              : `R${(line.proposedPriceExcl||0).toFixed(2)}`}</div>
+          <div>${line.status==='pending_review'
+              ? `<button class="btn-use-item btn-review-newitem">Mark Reviewed</button>`
+              : statusBadge}</div>`;
+        if (line.status === 'pending_review') {
+          row.querySelector('.btn-review-newitem').addEventListener('click', () => reviewTrifourNewItem(line, row));
+        }
+        el.appendChild(row);
+      });
+    }
+    async function reviewTrifourNewItem(line, row) {
+      const correctedPrice = parseFloat(row.querySelector('.correct-price').value) || 0;
+      if (line.newProductId) {
+        await updateDoc(doc(db,'pharmacy_products', line.newProductId), {
+          currentPriceExcl: correctedPrice, updatedAt: serverTimestamp(),
+        });
+      }
+      await updateDoc(doc(db,'pharmacy_trifour_lines', line.id), {
+        status: 'reviewed', proposedPriceExcl: correctedPrice,
+        reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
+        reviewedAt: serverTimestamp(),
+      });
+      showToast('Marked reviewed.');
+    }
+
+    // ── CSV export (client-side — a functional export, not a formatted workbook) ──
+    function exportTrifourLinesCSV(lines, filenamePrefix) {
+      if (!lines.length) { showToast('Nothing to export.'); return; }
+      const headers = ['Item','NAPPI Code','NAPPI Reliable','Pack Size','Existing Price','Trifour Cost','NAP','Variance %','Proposed/Corrected Price','Status'];
+      const rows = lines.map(l => [
+        l.item, l.nappiCode, l.nappiReliable?'Yes':'No', l.packSize,
+        l.existingPriceExcl ?? '', l.trifourCostPrice, l.nap, l.variancePct ?? '',
+        l.proposedPriceExcl, l.status,
+      ]);
+      const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${filenamePrefix}_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    document.getElementById('btn-export-prices')?.addEventListener('click', async () => {
+      if (!currentTrifourImport) { showToast('Select an import first.'); return; }
+      const snap = await getDocs(query(collection(db,'pharmacy_trifour_lines'),
+        where('importId','==', currentTrifourImport.id), where('lineType','==','price_update')));
+      exportTrifourLinesCSV(snap.docs.map(d=>d.data()), 'trifour_price_updates');
+    });
+    document.getElementById('btn-export-newitems')?.addEventListener('click', async () => {
+      if (!currentTrifourImport) { showToast('Select an import first.'); return; }
+      const snap = await getDocs(query(collection(db,'pharmacy_trifour_lines'),
+        where('importId','==', currentTrifourImport.id), where('lineType','==','new_item')));
+      exportTrifourLinesCSV(snap.docs.map(d=>d.data()), 'trifour_new_items');
+    });
+
+    async function initTrifourPage(user, role) {
+      await loadFormulary();
+      if (role !== 'executive') {
+        const tp = document.getElementById('tab-btn-prices');
+        const tn = document.getElementById('tab-btn-newitems');
+        if (tp) tp.disabled = true;
+        if (tn) tn.disabled = true;
+      }
+      subscribeTrifourHistory();
+    }
 
   </script>
   <!-- ── GLOBAL MODALS — outside all page-views so they overlay any screen ── -->
