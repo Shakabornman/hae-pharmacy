@@ -2088,6 +2088,28 @@
             </div>
 
             <div class="card mb-20">
+              <div class="card-title">NAPPI / SEP Spot Check <span style="font-size:0.7rem;font-weight:400;color:var(--grey-600);">(external, experimental)</span></div>
+              <p style="font-size:0.8rem;color:var(--grey-600);">
+                Looks up medicineprices.org.za directly from the browser — built on the government Single Exit Price database. This is a proof-of-concept: it may only cover scheduled medicines, not consumables/appliances, and the site may not allow direct browser calls (CORS). Nothing here writes to Firebase.
+              </p>
+              <div class="form-row">
+                <label class="form-label">Search by name</label>
+                <div style="display:flex;gap:8px;">
+                  <input type="text" id="spotcheck-query" class="form-input" placeholder="e.g. tramacet" />
+                  <button class="btn-secondary" id="btn-spotcheck-search" style="white-space:nowrap;">Search</button>
+                </div>
+              </div>
+              <div class="form-row">
+                <label class="form-label">Or look up by NAPPI code</label>
+                <div style="display:flex;gap:8px;">
+                  <input type="text" id="spotcheck-nappi" class="form-input" placeholder="e.g. 9999999999" />
+                  <button class="btn-secondary" id="btn-spotcheck-detail" style="white-space:nowrap;">Look Up</button>
+                </div>
+              </div>
+              <div id="spotcheck-result"></div>
+            </div>
+
+            <div class="card mb-20">
               <div class="card-title-row">
                 <div class="card-title">Formulary NAPPI Code Check</div>
                 <button class="btn-secondary" id="btn-check-nappi-quality">Run Check</button>
@@ -5286,7 +5308,10 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         }
 
         trifourWorkingRows = [];
+        if (trifourLinesUnsub) { trifourLinesUnsub(); trifourLinesUnsub = null; }
         currentTrifourImport = null;  // let the next history snapshot auto-select this new batch
+        document.getElementById('trifour-prices-list').innerHTML   = '<div class="list-loading">Loading…</div>';
+        document.getElementById('trifour-newitems-list').innerHTML = '<div class="list-loading">Loading…</div>';
         document.getElementById('trifour-preview').classList.add('hidden');
         document.getElementById('trifour-file').value = '';
         showToast('Import complete — review staged in Price Updates / New Items.');
@@ -5391,6 +5416,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       });
     }
     async function approveTrifourPriceLine(line, row) {
+      if (!currentTrifourImport) { showToast('No import selected — please click the batch in Import History first.'); return; }
       const newPrice = parseFloat(row.querySelector('.approve-price').value) || 0;
       await updateDoc(doc(db,'pharmacy_products', line.matchedProductId), {
         currentPriceExcl: newPrice, trifourStockCode: line.stockCode, updatedAt: serverTimestamp(),
@@ -5403,6 +5429,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       showToast('Price updated.');
     }
     async function rejectTrifourPriceLine(line) {
+      if (!currentTrifourImport) { showToast('No import selected — please click the batch in Import History first.'); return; }
       await updateDoc(doc(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines', line.id), {
         status: 'rejected',
         reviewedBy: currentUser.uid, reviewedByName: currentUser.displayName || currentUser.email,
@@ -5444,6 +5471,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
       });
     }
     async function reviewTrifourNewItem(line, row) {
+      if (!currentTrifourImport) { showToast('No import selected — please click the batch in Import History first.'); return; }
       const correctedPrice = parseFloat(row.querySelector('.correct-price').value) || 0;
       // Product creation happens here, not at import time — pharmacy_products.create is
       // executive-only in the rules, and this action (unlike Upload) is executive-gated.
@@ -5493,6 +5521,78 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         collection(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines'),
         where('lineType','==','new_item')));
       exportTrifourLinesCSV(snap.docs.map(d=>d.data()), 'trifour_new_items');
+    });
+
+    // ── NAPPI / SEP spot check — direct browser call to medicineprices.org.za ──
+    // Experimental/proof-of-concept: no proxy, no Firebase writes. If this fails
+    // with a network/CORS error, that tells us we'd need a Cloud Function proxy
+    // (same pattern as the existing AI Cloudflare Worker) to use this for real.
+    const SPOTCHECK_BASE = 'https://medicineprices.org.za/api/v2';
+
+    function renderSpotcheckError(err) {
+      const el = document.getElementById('spotcheck-result');
+      el.innerHTML = `
+        <div style="margin-top:10px;padding:10px;background:#FFF0F0;border-radius:8px;font-size:0.8rem;color:var(--red);">
+          Request failed: ${err.message}.<br>
+          If this is a CORS/network error, the browser is blocking the direct call —
+          that would mean this needs to go through a Cloud Function proxy to actually work,
+          same pattern as the existing AI proxy.
+        </div>`;
+    }
+
+    function renderSpotcheckSearchResults(results) {
+      const el = document.getElementById('spotcheck-result');
+      if (!Array.isArray(results) || !results.length) {
+        el.innerHTML = '<div class="list-empty" style="margin-top:10px;">No results — this may mean the item genuinely isn\'t in the medicines price database (e.g. a consumable/appliance, not a scheduled medicine).</div>';
+        return;
+      }
+      el.innerHTML = `<div style="margin-top:10px;max-height:280px;overflow-y:auto;">
+        ${results.slice(0,20).map(r => `
+          <div style="padding:8px;background:var(--grey-100);border-radius:6px;margin-bottom:4px;font-size:0.8rem;">
+            <strong>${r.name||'—'}</strong> <span style="color:var(--grey-600);">(${r.dosage_form||'—'})</span><br>
+            NAPPI ${r.nappi_code||'—'} · SEP ${r.sep||'—'} · ${r.number_of_generics||0} generic(s)
+          </div>`).join('')}
+      </div>`;
+    }
+
+    function renderSpotcheckDetail(d) {
+      const el = document.getElementById('spotcheck-result');
+      if (!d || !d.nappi_code) {
+        el.innerHTML = '<div class="list-empty" style="margin-top:10px;">Not found — this NAPPI code isn\'t in the medicines price database. Could mean it\'s a consumable/appliance rather than a scheduled medicine, or the code itself is wrong.</div>';
+        return;
+      }
+      const ingredients = (d.ingredients||[]).map(i => `${i.name} ${i.strength||''}${i.unit||''}`).join(', ');
+      el.innerHTML = `<div style="margin-top:10px;padding:10px;background:var(--grey-100);border-radius:8px;font-size:0.8rem;">
+        <strong>${d.name||'—'}</strong><br>
+        NAPPI ${d.nappi_code} · Schedule ${d.schedule||'—'} · ${d.dosage_form||'—'} · Pack ${d.pack_size||'—'}<br>
+        SEP ${d.sep||'—'} · Cost/unit ${d.cost_per_unit||'—'} · Dispensing fee ${d.dispensing_fee||'—'}<br>
+        ${ingredients ? `Ingredients: ${ingredients}<br>` : ''}
+        ${d.is_generic ? `${d.is_generic} · ${d.number_of_generics||0} generic(s) available` : ''}
+      </div>`;
+    }
+
+    document.getElementById('btn-spotcheck-search')?.addEventListener('click', async () => {
+      const q = document.getElementById('spotcheck-query').value.trim();
+      if (!q) return;
+      const el = document.getElementById('spotcheck-result');
+      el.innerHTML = '<div class="list-loading">Searching…</div>';
+      try {
+        const resp = await fetch(`${SPOTCHECK_BASE}/search-lite?q=${encodeURIComponent(q)}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        renderSpotcheckSearchResults(await resp.json());
+      } catch(e) { renderSpotcheckError(e); }
+    });
+
+    document.getElementById('btn-spotcheck-detail')?.addEventListener('click', async () => {
+      const n = document.getElementById('spotcheck-nappi').value.trim();
+      if (!n) return;
+      const el = document.getElementById('spotcheck-result');
+      el.innerHTML = '<div class="list-loading">Looking up…</div>';
+      try {
+        const resp = await fetch(`${SPOTCHECK_BASE}/detail?nappi=${encodeURIComponent(n)}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        renderSpotcheckDetail(await resp.json());
+      } catch(e) { renderSpotcheckError(e); }
     });
 
     // ── Formulary NAPPI code data-quality check (read-only) ─────────────
