@@ -2087,6 +2087,17 @@
               </div>
             </div>
 
+            <div class="card mb-20">
+              <div class="card-title-row">
+                <div class="card-title">Formulary NAPPI Code Check</div>
+                <button class="btn-secondary" id="btn-check-nappi-quality">Run Check</button>
+              </div>
+              <p style="font-size:0.8rem;color:var(--grey-600);">
+                Read-only — checks the stored NAPPI code on every formulary product for the right length (10 digits). Nothing is changed by this check.
+              </p>
+              <div id="nappi-quality-result"></div>
+            </div>
+
             <div class="card">
               <div class="card-title">Import History</div>
               <div id="trifour-import-history"><div class="list-loading">Loading…</div></div>
@@ -5160,17 +5171,32 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     }
 
     // ── Matching against the formulary ──────────────────────────────────
+    function normalizeNappi(code) {
+      // Strip leading zeros for comparison only — NAPPI codes are numeric IDs and padding
+      // is a formatting artifact, not a meaningful digit. Handles the case where the
+      // original pharmacy_products import (like today's Trifour CSV) lost leading zeros
+      // by reading the column as a number instead of text.
+      return (code || '').replace(/^0+/, '');
+    }
     function matchTrifourRow(row) {
-      if (!TRIFOUR_PLACEHOLDER_NAPPI.has(row.nappiCode)) {
-        const byNappi = formularyCache.find(p => p.nappiCode === row.nappiCode);
-        if (byNappi) return { product: byNappi, matchedVia: 'nappi', reliable: true };
+      const isPlaceholder = TRIFOUR_PLACEHOLDER_NAPPI.has(row.nappiCode);
+      if (!isPlaceholder) {
+        const exact = formularyCache.find(p => p.nappiCode === row.nappiCode);
+        if (exact) return { product: exact, matchedVia: 'nappi', reliable: true };
+        const normRow = normalizeNappi(row.nappiCode);
+        if (normRow) {
+          const padded = formularyCache.find(p => normalizeNappi(p.nappiCode) === normRow);
+          if (padded) return { product: padded, matchedVia: 'nappi-padded', reliable: true };
+        }
       }
       const byStock = formularyCache.find(p => p.trifourStockCode && p.trifourStockCode === row.stockCode);
       if (byStock) return { product: byStock, matchedVia: 'stockCode', reliable: false };
       const firstWord = row.item.toLowerCase().split(' ')[0];
-      const byDesc = firstWord ? formularyCache.find(p => (p.description||'').toLowerCase().includes(firstWord)) : null;
+      const byDesc = (firstWord && firstWord.length >= 4)
+        ? formularyCache.find(p => (p.description||'').toLowerCase().includes(firstWord))
+        : null;
       if (byDesc) return { product: byDesc, matchedVia: 'description', reliable: false };
-      return { product: null, matchedVia: null, reliable: !TRIFOUR_PLACEHOLDER_NAPPI.has(row.nappiCode) };
+      return { product: null, matchedVia: null, reliable: !isPlaceholder };
     }
 
     document.getElementById('btn-parse-trifour')?.addEventListener('click', async () => {
@@ -5244,6 +5270,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
             batch.set(lineRef, {
               importId: importRef.id, lineType,
               item: row.item, nappiCode: row.nappiCode, nappiReliable: row.reliable,
+              matchedVia: row.matchedVia || null,
               stockCode: row.stockCode, packSize: row.packSize,
               trifourCostPrice: row.costPrice, nap: row.nap, variancePct,
               varianceFlag: variancePct !== null && Math.abs(variancePct) > TRIFOUR_PRICE_VARIANCE_PCT,
@@ -5323,6 +5350,14 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
     }
 
     // ── Price Updates tab ────────────────────────────────────────────
+    function trifourMatchWarning(line) {
+      if (line.nappiReliable) return '';
+      if (line.matchedVia === 'stockCode')
+        return '<div style="font-size:0.68rem;color:#7A5000;">matched via stored stock code — verify</div>';
+      if (line.matchedVia === 'description')
+        return '<div style="font-size:0.68rem;color:var(--red);">weak text match — verify this is the right product before approving</div>';
+      return '<div style="font-size:0.68rem;color:var(--red);">unreliable match</div>';
+    }
     function renderTrifourPriceLines(lines) {
       const el = document.getElementById('trifour-prices-list');
       if (!lines.length) { el.innerHTML = '<div class="list-empty">No price update lines for this import.</div>'; return; }
@@ -5336,7 +5371,7 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         const statusBadge = line.status !== 'pending_review'
           ? `<span class="status-pill ${line.status}">${line.status.replace(/_/g,' ')}</span>` : '';
         row.innerHTML = `
-          <div><strong>${line.item}</strong>${!line.nappiReliable?'<div style="font-size:0.68rem;color:var(--red);">unreliable NAPPI match</div>':''}</div>
+          <div><strong>${line.item}</strong>${trifourMatchWarning(line)}</div>
           <div>${line.nappiCode}</div>
           <div>${line.packSize}</div>
           <div>R${(line.existingPriceExcl||0).toFixed(2)}</div>
@@ -5458,6 +5493,35 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         collection(db, 'pharmacy_trifour', currentTrifourImport.id, 'lines'),
         where('lineType','==','new_item')));
       exportTrifourLinesCSV(snap.docs.map(d=>d.data()), 'trifour_new_items');
+    });
+
+    // ── Formulary NAPPI code data-quality check (read-only) ─────────────
+    document.getElementById('btn-check-nappi-quality')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-check-nappi-quality');
+      const el  = document.getElementById('nappi-quality-result');
+      btn.disabled = true; btn.textContent = 'Checking…';
+      await loadFormulary();
+      const total = formularyCache.length;
+      const bad   = formularyCache.filter(p => (p.nappiCode || '').length !== 10 && (p.nappiCode || '').length !== 0);
+      const blank = formularyCache.filter(p => !p.nappiCode);
+      const ok    = total - bad.length - blank.length;
+      el.innerHTML = `
+        <div class="import-summary-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="import-summary-tile"><div class="num">${ok}</div><div class="lbl">10-digit (OK)</div></div>
+          <div class="import-summary-tile"><div class="num" style="color:${bad.length?'var(--red)':'var(--navy)'};">${bad.length}</div><div class="lbl">Wrong Length</div></div>
+          <div class="import-summary-tile"><div class="num">${blank.length}</div><div class="lbl">Blank</div></div>
+        </div>
+        ${bad.length ? `
+          <p style="font-size:0.78rem;color:var(--grey-600);margin-top:8px;">Sample of affected products (first 15):</p>
+          <div style="max-height:220px;overflow-y:auto;">
+            ${bad.slice(0,15).map(p => `
+              <div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:4px 8px;background:var(--grey-100);border-radius:6px;margin-bottom:4px;">
+                <span>${p.description||'—'}</span>
+                <span style="font-family:monospace;color:var(--red);">"${p.nappiCode}" (${(p.nappiCode||'').length} digits)</span>
+              </div>`).join('')}
+          </div>` : ''}
+      `;
+      btn.disabled = false; btn.textContent = 'Run Check';
     });
 
     async function initTrifourPage(user, role) {
