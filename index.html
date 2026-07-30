@@ -2636,11 +2636,12 @@
 
     // ── Save request to Firestore ─────────────────────────────────────
     async function saveRequest(data) {
-      await addDoc(collection(db, 'pharmacy_requests'), {
+      const ref = await addDoc(collection(db, 'pharmacy_requests'), {
         ...data,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      return ref;
     }
 
     // ── Delete request ────────────────────────────────────────────────
@@ -3200,7 +3201,7 @@ If you cannot read an item clearly, include it with description marked as "[uncl
       const btn = document.getElementById('btn-scan-save');
       btn.disabled = true; btn.textContent = 'Saving…';
       try {
-        await saveRequest({
+        const reqRef = await saveRequest({
           channel:         'scan',
           requestedByUid:  currentUser.uid,
           requestedByName: name,
@@ -3208,6 +3209,20 @@ If you cannot read an item clearly, include it with description marked as "[uncl
           status: 'pending',
           whatsappNote: '',
         });
+        // Persist the original scan — audit trail requires the actual document,
+        // not just what the AI extracted from it (which Finance may later correct).
+        const scanFile = document.getElementById('scan-file').files[0];
+        if (scanFile) {
+          try {
+            const path = `pharmacy/scans/${reqRef.id}/${Date.now()}_${scanFile.name}`;
+            const sRef = storageRef(storage, path);
+            await uploadBytes(sRef, scanFile);
+            const url = await getDownloadURL(sRef);
+            await updateDoc(doc(db,'pharmacy_requests', reqRef.id), { scanUrls: [url] });
+          } catch(upErr) {
+            showToast('Request saved, but the scan file failed to upload: ' + upErr.message);
+          }
+        }
         // Reset scan form
         document.getElementById('scan-name').value       = '';
         document.getElementById('scan-ward').value       = '';
@@ -3501,9 +3516,9 @@ If you cannot read an item clearly, include it with description marked as "[uncl
             }).join('')}
           </div>
         </div>
-        ${req.scanUrl ? `<div class="detail-field">
-          <div class="detail-label">Original scan</div>
-          <div><a href="${Array.isArray(req.scanUrl) ? req.scanUrl[0] : req.scanUrl}" target="_blank" style="color:var(--mid-blue);">View scan ↗</a></div>
+        ${(req.scanUrls && req.scanUrls.length) ? `<div class="detail-field">
+          <div class="detail-label">Original scan${req.scanUrls.length>1?'s':''}</div>
+          <div>${req.scanUrls.map((u,i) => `<a href="${u}" target="_blank" style="color:var(--mid-blue);margin-right:10px;">View scan${req.scanUrls.length>1?' '+(i+1):''} ↗</a>`).join('')}</div>
         </div>` : ''}
       `;
 
@@ -4325,6 +4340,20 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
           presaleUploadedAt: serverTimestamp(),
           presaleUploadedBy: currentUser.uid,
         });
+        // Persist the original presale PDF — the actual quote from the supplier,
+        // independent of what Finance matched/corrected in the table above.
+        const presaleFile = document.getElementById('presale-file').files[0];
+        if (presaleFile) {
+          try {
+            const path = `pharmacy/presales/${currentOrderForAction.id}/${Date.now()}_${presaleFile.name}`;
+            const sRef = storageRef(storage, path);
+            await uploadBytes(sRef, presaleFile);
+            const url = await getDownloadURL(sRef);
+            await updateDoc(doc(db,'pharmacy_orders', currentOrderForAction.id), { presaleUrl: url });
+          } catch(upErr) {
+            showToast('Presale confirmed, but the PDF failed to upload: ' + upErr.message);
+          }
+        }
         document.getElementById('modal-presale-upload').classList.add('hidden');
         showToast('Presale confirmed — submitted for COO approval.');
       } catch(e) {
@@ -4429,6 +4458,8 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
             <div class="approval-meta-value">${date}</div></div>
           <div><div class="approval-meta-label">PRE Number</div>
             <div class="approval-meta-value">${order.preNumber||'—'}</div></div>
+          ${order.presaleUrl ? `<div><div class="approval-meta-label">Presale PDF</div>
+            <div class="approval-meta-value"><a href="${order.presaleUrl}" target="_blank" style="color:var(--mid-blue);">View original ↗</a></div></div>` : ''}
           <div><div class="approval-meta-label">Doctor</div>
             <div class="approval-meta-value">${order.doctorName||'—'}</div></div>
           <div><div class="approval-meta-label">Total Excl</div>
@@ -4887,6 +4918,20 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
         await updateDoc(doc(db,'pharmacy_orders', currentInvoiceOrder.id), {
           invoiceId: invoiceRef.id, updatedAt: serverTimestamp(),
         });
+        // Persist the original invoice PDF, if one was uploaded — the actual
+        // supplier document, independent of the extracted/matched line data above.
+        const invoiceFile = document.getElementById('invoice-file').files[0];
+        if (invoiceFile) {
+          try {
+            const path = `pharmacy/invoices/${invoiceRef.id}/${Date.now()}_${invoiceFile.name}`;
+            const sRef = storageRef(storage, path);
+            await uploadBytes(sRef, invoiceFile);
+            const url = await getDownloadURL(sRef);
+            await updateDoc(doc(db,'pharmacy_invoices', invoiceRef.id), { scanUrl: url });
+          } catch(upErr) {
+            showToast('Invoice captured, but the PDF failed to upload: ' + upErr.message);
+          }
+        }
         document.getElementById('modal-capture-invoice').classList.add('hidden');
         showToast('Invoice captured — submitted for reconciliation.');
       } catch(e) {
@@ -4978,6 +5023,8 @@ Example: [{"description":"PARACETAMOL IV 100ML","nappiCode":"721647001","qty":10
             <div class="approval-meta-value">${inv.invoiceNumber||'—'}</div></div>
           <div><div class="approval-meta-label">Invoice Date</div>
             <div class="approval-meta-value">${inv.invoiceDate||'—'}</div></div>
+          ${inv.scanUrl ? `<div><div class="approval-meta-label">Invoice PDF</div>
+            <div class="approval-meta-value"><a href="${inv.scanUrl}" target="_blank" style="color:var(--mid-blue);">View original ↗</a></div></div>` : ''}
           <div><div class="approval-meta-label">Total Incl</div>
             <div class="approval-meta-value" style="color:var(--navy);font-size:1.05rem;">R${(inv.totalIncl||0).toFixed(2)}</div></div>
           <div><div class="approval-meta-label">Status</div>
