@@ -2381,6 +2381,8 @@
         applyNavForRole(role);
         showPage('home');
         showScreen('app');
+        // Deep link from Ekhaya Connect (Information tab, Drug Formulary): ?page=formulary opens the Formulary directly.
+        if (new URLSearchParams(location.search).get('page') === 'formulary') showPageExtended('formulary');
 
       } catch (err) {
         console.error('Access control check failed:', err);
