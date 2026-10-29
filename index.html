@@ -2261,11 +2261,15 @@
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+    import { getFunctions, httpsCallable }
+      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
 
     // ── Init ──────────────────────────────────────────────────────────
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
+    // AI scan reading goes through the signed-in function aiAssist (EC-049); the prompt and key live on the server.
+    const aiAssist = httpsCallable(getFunctions(app, 'europe-west1'), 'aiAssist');
 
     // ── Screen management ─────────────────────────────────────────────
     const screens = ['loading','login','denied','app'];
@@ -2901,55 +2905,16 @@
       });
     }
 
-    // ── Scan: read with AI via Cloudflare proxy ────────────────────────
-    const PROXY_URL = 'https://hae-motivation-proxy.shakabornman.workers.dev';
-
+    // ── Scan: read with AI via the signed-in function ──────────────────
     async function readScanWithAI(file) {
-      return new Promise((resolve, reject) => {
+      const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = async (e) => {
-          const base64 = e.target.result.split(',')[1];
-          const mime   = file.type || 'image/jpeg';
-          try {
-            const resp = await fetch(PROXY_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model: 'claude-haiku-4-5-20251001',
-                max_tokens: 1024,
-                messages: [{
-                  role: 'user',
-                  content: [
-                    {
-                      type: 'image',
-                      source: { type: 'base64', media_type: mime, data: base64 }
-                    },
-                    {
-                      type: 'text',
-                      text: `This is a handwritten pharmacy stock request from a hospital ward.
-Extract every item listed. For each item return:
-- description: the item name as written
-- qty: quantity requested (number, default 1 if not specified)
-
-Respond ONLY with a JSON array, no explanation, no markdown, no preamble.
-Example: [{"description":"Morphine 10mg amp","qty":5},{"description":"NaCl 1L","qty":10}]
-If you cannot read an item clearly, include it with description marked as "[unclear] <what you can read>".`
-                    }
-                  ]
-                }]
-              })
-            });
-            const data = await resp.json();
-            const text = data.content?.[0]?.text || '[]';
-            const clean = text.replace(/```json|```/g,'').trim();
-            resolve(JSON.parse(clean));
-          } catch(err) {
-            reject(err);
-          }
-        };
+        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+      const res = await aiAssist({ task: 'pharmacyScan', mediaType: file.type || 'image/jpeg', data: base64 });
+      return res.data.result;
     }
 
     // ── Init requests page ────────────────────────────────────────────
